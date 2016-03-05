@@ -12,7 +12,7 @@ AdvDupeClient.version = 1.741
 local MaxUploadLength = 180
 local UploadPiecesPerSend = 4
 local UploadSendDelay = 0.15
-local MaxUploadSize = 0
+local MaxUploadSize = -1
 local CanDownload = true
 
 local function RcvUploadSettings( um )
