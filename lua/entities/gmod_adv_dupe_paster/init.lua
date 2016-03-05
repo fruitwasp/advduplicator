@@ -255,4 +255,3 @@ end
 
 numpad.Register( "PasterCreate",	Paste )
 numpad.Register( "PasterUndo",		Undo  )
-

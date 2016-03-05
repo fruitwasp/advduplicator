@@ -138,17 +138,17 @@ dupeshare.Dictionary = {
 	[95]	= {"|qr", "\t\t\"r\"\t\t\""},
 	[96]	= {"|qp", "\t\t\"p\"\t\t\""},
 	[97]	= {"|HA", "\"HoldAngle\"\n"},
-	[98]	= {"½th", "\t\t{\n\t\t\t\"^Class\"\t\t\"Sgmod_thruster\"\n\t\t\t\"nocollide\"\t\t\"Btrue\"\n\t\t\t\"effect\"\t\t"},
-	[99]	= {"½pp", "\t\t{\n\t\t\t\"^Class\"\t\t\"Sprop_physics\"\n\t\t\t\"^Model\"\t\t\"S"},
-	[100]	= {"½LA", "\t\t\t\"^Local^Angle\"\t\t\"A"},
-	[101]	= {"½LP", "\t\t\t\"^Local^Pos\"\t\t\"V"},
-	[102]	= {"½po", "\t\t\t\"^Physics^Objects\""},
-	[103]	= {"½Ps", "\t\t\t\"^Pos\"\t\t\"V"},
-	[104]	= {"½An", "\t\t\t\"^Angle\"\t\t\"A"},
-	[105]	= {"½EM", "\t\t\t\"^Entity^Mods\""},
-	[106]	= {"½Cl", "\t\t\t\"^Class\"\t\t\"S"},
-	[107]	= {"½CG", "\t\t\t\t\"^Collision^Group^Mod\"\t\t\"N"},
-	[108]	= {"½RD", "\t\t\t\t\"^R^D^Dupe^Info\""},
+	[98]	= {"ï¿½th", "\t\t{\n\t\t\t\"^Class\"\t\t\"Sgmod_thruster\"\n\t\t\t\"nocollide\"\t\t\"Btrue\"\n\t\t\t\"effect\"\t\t"},
+	[99]	= {"ï¿½pp", "\t\t{\n\t\t\t\"^Class\"\t\t\"Sprop_physics\"\n\t\t\t\"^Model\"\t\t\"S"},
+	[100]	= {"ï¿½LA", "\t\t\t\"^Local^Angle\"\t\t\"A"},
+	[101]	= {"ï¿½LP", "\t\t\t\"^Local^Pos\"\t\t\"V"},
+	[102]	= {"ï¿½po", "\t\t\t\"^Physics^Objects\""},
+	[103]	= {"ï¿½Ps", "\t\t\t\"^Pos\"\t\t\"V"},
+	[104]	= {"ï¿½An", "\t\t\t\"^Angle\"\t\t\"A"},
+	[105]	= {"ï¿½EM", "\t\t\t\"^Entity^Mods\""},
+	[106]	= {"ï¿½Cl", "\t\t\t\"^Class\"\t\t\"S"},
+	[107]	= {"ï¿½CG", "\t\t\t\t\"^Collision^Group^Mod\"\t\t\"N"},
+	[108]	= {"ï¿½RD", "\t\t\t\t\"^R^D^Dupe^Info\""},
 	[109]	= {"|8", "\t\t\t\t\t\t\t\t"},
 	[110]	= {"|7", "\t\t\t\t\t\t\t"},
 	[111]	= {"|6", "\t\t\t\t\t\t"},
@@ -160,18 +160,18 @@ dupeshare.Dictionary = {
 }
 
 local char_map = {
-	["\n"] = "ƒ",
-	["\t"] = "†",
-	["\""] = "¥",
-	["'"]  = "¤"
+	["\n"] = "ï¿½",
+	["\t"] = "ï¿½",
+	["\""] = "ï¿½",
+	["'"]  = "ï¿½"
 }
 
 local inv_char_map = {
-	["ƒ"] = "\n",
-	["†"] = "\t",
-	["¥"] = "\"",
-	["‡"] = "\"",
-	["¤"] = "'"
+	["ï¿½"] = "\n",
+	["ï¿½"] = "\t",
+	["ï¿½"] = "\"",
+	["ï¿½"] = "\"",
+	["ï¿½"] = "'"
 }
 
 function dupeshare.Compress(str, ForConCommand, usezlib)
@@ -204,7 +204,7 @@ function dupeshare.Compress(str, ForConCommand, usezlib)
 			end
 		end
 
-		if (ForConCommand) then //„…ˆ‰Š‹Œ‘’“”•–—˜™š›œŸ ¡¢£¤¦§¨©ª unused special chars
+		if (ForConCommand) then //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ unused special chars
 			for k, _ in pairs (inv_char_map) do
 				str = string.gsub (str, k, "|" .. k)
 			end
@@ -254,7 +254,7 @@ end
 
 
 //removes illegal characters from file names
-dupeshare.BadChars = {"\\", "/", ":", "*", "?", "\"", "<", ">", "¦", "|", "'"}
+dupeshare.BadChars = {"\\", "/", ":", "*", "?", "\"", "<", ">", "ï¿½", "|", "'"}
 
 function dupeshare.ReplaceBadChar(str)
 	for _,entry in pairs(dupeshare.BadChars) do

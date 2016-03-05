@@ -23,18 +23,18 @@ CreateConVar( "sv_AdvDupeEnablePublicFolder", 1, {FCVAR_ARCHIVE} )
   Process and save given dupe tables to file
 -----------------------------------------------------------]]
 function AdvDupe.SaveDupeTablesToFile( ply, EntTables, ConstraintTables, HeadEntityIdx, HoldAngle, HoldPos, filename, desc, StartPos, debugsave )
-	
+
 	--save to a sub folder for each player
 	--local dir = "adv_duplicator/"..dupeshare.GetPlayerName(ply)
 	if (!AdvDupe[ply]) then AdvDupe[ply] = {} end
 	local dir = AdvDupe[ply].cdir or AdvDupe.GetPlayersFolder(ply)
-	
+
 	--get and check the that filename contains no illegal characters
 	local filename = dupeshare.ReplaceBadChar(filename)
 	--tostring(ply:GetInfo( "adv_duplicator_save_filename" )))
-	
+
 	filename = dupeshare.FileNoOverWriteCheck( dir, filename )
-	
+
 	--save to file
 	local temp = {}
 	temp.HeadEntityIdx		= HeadEntityIdx
@@ -46,11 +46,11 @@ function AdvDupe.SaveDupeTablesToFile( ply, EntTables, ConstraintTables, HeadEnt
 		table.insert( ConstsTable, v )
 	end
 	temp.Constraints		= ConstsTable
-	
+
 	local Creator			= ply:GetName() or "unknown"
 	local NumOfEnts			= table.Count(EntTables) or 0
 	local NumOfConst		= table.Count(ConstraintTables) or 0
-	
+
 	local Header = {}
 	Header[1] = "Type:"			.."AdvDupe File"
 	Header[2] =	"Creator:"		..string.format('%q', Creator)
@@ -59,7 +59,7 @@ function AdvDupe.SaveDupeTablesToFile( ply, EntTables, ConstraintTables, HeadEnt
 	Header[4] =	"Description:"	..string.format('%q', desc)
 	Header[5] =	"Entities:"		..NumOfEnts
 	Header[6] =	"Constraints:"	..NumOfConst
-	
+
 	local ExtraHeader = {}
 	ExtraHeader[1] = "FileVersion:"				..AdvDupe.FileVersion
 	ExtraHeader[2] = "AdvDupeVersion:"			..AdvDupe.Version
@@ -72,9 +72,9 @@ function AdvDupe.SaveDupeTablesToFile( ply, EntTables, ConstraintTables, HeadEnt
 	ExtraHeader[9] = "HoldAngle:"				..string.format( "%g,%g,%g", HoldAngle.pitch, HoldAngle.yaw, HoldAngle.roll )
 	ExtraHeader[10] = "HoldPos:"				..string.format( "%g,%g,%g", HoldPos.x, HoldPos.y, HoldPos.z )
 	ExtraHeader[11] = "StartPos:"				..string.format( "%g,%g,%g", StartPos.x, StartPos.y, StartPos.z )
-	
+
 	Serialiser.SaveTablesToFile( ply, filename, Header, ExtraHeader, NumOfEnts, EntTables, NumOfConst, ConstsTable, debugsave )
-	
+
 	return filename, Creator, desc , NumOfEnts, NumOfConst, AdvDupe.FileVersion --for sending to client after saving
 end
 
@@ -83,46 +83,46 @@ end
 -----------------------------------------------------------]]
 function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 	filepath = filepath:lower()
-	
+
 	if ( !file.Exists(filepath, "DATA") ) then return end
-	
+
 	local tool = AdvDupe.GetAdvDupeToolObj(ply)
 	if ( !tool ) then return end
-	
+
 	local function Load1(ply, filepath, tool, temp)
-		
+
 		--
 		--	new file format
 		--
 		if ( string.Left(temp, 5) != "\"Out\"") then
-			
+
 			--local HeaderTbl, ExtraHeaderTbl, Data = Serialiser.DeserialiseWithHeaders( temp )
-			
+
 			local function Load2NewFile(ply, filepath, tool, HeaderTbl, ExtraHeaderTbl, Data)
 				if ( HeaderTbl.Type ) and ( HeaderTbl.Type == "AdvDupe File" ) then
-					
+
 					--MsgN("AdvDupe:Loaded new file ",filepath,"  version: ",ExtraHeaderTbl.FileVersion)
-					
+
 					ExtraHeaderTbl.FileVersion = tonumber(ExtraHeaderTbl.FileVersion)
-					
+
 					if (ExtraHeaderTbl.FileVersion > AdvDupe.FileVersion) then
 						Msg("AdvDupeINFO:File is newer than installed version, failure may occure, you should update.")
 					end
-					
+
 					if ( ExtraHeaderTbl.FileVersion >= 0.82 ) and ( ExtraHeaderTbl.FileVersion < 0.9 )then
-						
+
 						local a,b,c = ExtraHeaderTbl.HoldAngle:match("(.-),(.-),(.+)")
 						local HoldAngle = Angle( tonumber(a), tonumber(b), tonumber(c) )
-						
+
 						local a,b,c = ExtraHeaderTbl.HoldPos:match("(.-),(.-),(.+)")
 						local HoldPos = Vector( tonumber(a), tonumber(b), tonumber(c) )
-						
+
 						local StartPos
 						if ( ExtraHeaderTbl.FileVersion >= 0.83 ) then
 							local a,b,c = ExtraHeaderTbl.StartPos:match("(.-),(.-),(.+)")
 							StartPos = Vector( tonumber(a), tonumber(b), tonumber(c) )
 						end
-						
+
 						tool:LoadFileCallBack( filepath,
 							Data.Entities, Data.Constraints,
 							{},{}, tonumber(ExtraHeaderTbl.Head),
@@ -151,27 +151,27 @@ function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 							ExtraHeaderTbl.Time
 						)
 					end
-					
+
 					--[[return Data.Entities, Data.Constraints,
 					{},{}, Data.HeadEntityIdx,
 					Data.HoldAngle,
-					Data.HoldPos, false, 
+					Data.HoldPos, false,
 					HeaderTbl.Creator:sub(2, -2),
-					HeaderTbl.Description:sub(2, -2), 
+					HeaderTbl.Description:sub(2, -2),
 					HeaderTbl.Entities,
 					HeaderTbl.Constraints,
 					ExtraHeaderTbl.FileVersion,
 					HeaderTbl.Date,
 					ExtraHeaderTbl.Time--]]
-					
+
 				elseif ( HeaderTbl.Type ) and ( HeaderTbl.Type == "Contraption Saver File" ) then
-					
+
 					--MsgN("AdvDupe:Loaded Contraption Saver file ",filepath,"  version: ",ExtraHeaderTbl.Version)
-					
+
 					--[[for k,v in pairs(Data.Entities) do
 						v.LocalPos.z = v.LocalPos.z + Data.Height + 8
 					end--]]
-					
+
 					--[[for k,v in pairs(Data.Constraints) do
 						if (v.Entity) then
 							for b, j in pairs(v.Entity) do
@@ -181,25 +181,25 @@ function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 							end
 						end
 					end--]]
-					
+
 					ply:ConCommand( "adv_duplicator_height "..(Data.Height + 8) )
-					
+
 					tool:LoadFileCallBack( filepath,
 						Data.Entities, Data.Constraints,
-						{},{}, Data.Head, Angle(0,0,0), 
-						Vector(0,0, -(Data.Height + 8)), --Data.Entities[Data.Head].LocalPos.z + 
+						{},{}, Data.Head, Angle(0,0,0),
+						Vector(0,0, -(Data.Height + 8)), --Data.Entities[Data.Head].LocalPos.z +
 						false, HeaderTbl.Creator:sub(2, -2),
-						"Contraption Saver file v"..ExtraHeaderTbl.Version, 
+						"Contraption Saver file v"..ExtraHeaderTbl.Version,
 						tonumber(HeaderTbl.Entities),
 						tonumber(HeaderTbl.Constraints),
 						tonumber(ExtraHeaderTbl.Version),
 						HeaderTbl.Date,
 						"n/a"
 					)
-					
+
 				elseif (Data.Information) then
 					--MsgN("AdvDupe:Loaded old Contraption Saver file version ",Data.Information.Version)
-					
+
 					--find the lowest and use that as the head
 					local head,low
 					for k,v in pairs(Data.Entities) do
@@ -208,34 +208,34 @@ function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 							low = v.Pos.z
 						end
 					end
-					
+
 					--Convert the Pos and Angle keys to a system AdvDupe understands
 					AdvDupe.ConvertPositionsToLocal( Data.Entities, Data.Constraints, Data.Entities[head].Pos + Vector(0,0,-15), Angle(0,0,0) )
-					
+
 					tool:LoadFileCallBack( filepath,
 						Data.Entities, Data.Constraints,
-						{},{}, head, Angle(0,0,0), Vector(0,0,0), false, 
+						{},{}, head, Angle(0,0,0), Vector(0,0,0), false,
 						Data.Information.Creator,
-						"Old Contraption Saver file v"..Data.Information.Version, 
+						"Old Contraption Saver file v"..Data.Information.Version,
 						Data.Information.Entities,
 						Data.Information.Constraints,
 						Data.Information.Version,
 						Data.Information.Date,
 						"n/a"
 					)
-					
+
 					--[[return Data.Entities, Data.Constraints,
 					{},{}, head,
 					Angle(0,0,0),
-					Vector(0,0,0), false, 
+					Vector(0,0,0), false,
 					Data.Information.Creator,
-					"Old Contraption Saver file v"..Data.Information.Version, 
+					"Old Contraption Saver file v"..Data.Information.Version,
 					Data.Information.Entities,
 					Data.Information.Constraints,
 					Data.Information.Version,
 					Data.Information.Date,
 					"n/a"--]]
-					
+
 				else
 					AdvDupe.SendClientError(ply, "Unknown File Type or Bad File")
 					Msg("AdvDupeERROR: Unknown File Type or Bad File\n")
@@ -243,20 +243,20 @@ function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 					return
 				end
 			end
-			
+
 			--timer.Simple(.1, Load2NewFile, ply, filepath, tool, HeaderTbl, ExtraHeaderTbl, Data)
-			
+
 			Serialiser.DeserialiseWithHeaders( temp, Load2NewFile, ply, filepath, tool )
-			
+
 			return --or it will try to load as an old file
-			
+
 		end
-		
+
 		--
 		--	old file formats
 		--
 		temp = util.KeyValuesToTable(temp)
-		
+
 		if ( temp["VersionInfo"] or temp["versioninfo"] ) then --pre-0.6x file, it ueses a different meathod os stroing FullCase
 			--Msg("AdvDipe: Loading old legacy file type\n")
 			temp = dupeshare.RebuildTableFromLoad_Old(temp)
@@ -269,33 +269,33 @@ function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 			--Msg("AdvDipe: Loading v0.6x file type\n")
 			temp = dupeshare.RebuildTableFromLoad(temp)
 		end
-		
+
 		if (temp) and (temp["VersionInfo"]) and (temp["VersionInfo"]["FileVersion"] > AdvDupe.FileVersion) then
 			Msg("AdvDupeINFO:File is newer than installed version, failure may occure, you should update.")
 		end
-		
+
 		local function Load3(ply, filepath, tool, temp)
 			--check the file was loaded and we understand it's version then load the data in to the tables
 			if (temp) and (temp["VersionInfo"]) and (temp["VersionInfo"]["FileVersion"] >= 0.6) then
 				--MsgN("AdvDupe:Loaded old file ",filepath,"  version: ",temp.VersionInfo.FileVersion)
-				
+
 				tool:LoadFileCallBack( filepath,
-					temp.EntTables, temp.ConstraintTables, {},{}, 
-					temp.HeadEntityIdx, temp.HoldAngle, temp.HoldPos, 
-					false, temp.VersionInfo.Creator, temp.VersionInfo.Desc, 
-					temp.VersionInfo.NumOfEnts, temp.VersionInfo.NumOfConst, 
+					temp.EntTables, temp.ConstraintTables, {},{},
+					temp.HeadEntityIdx, temp.HoldAngle, temp.HoldPos,
+					false, temp.VersionInfo.Creator, temp.VersionInfo.Desc,
+					temp.VersionInfo.NumOfEnts, temp.VersionInfo.NumOfConst,
 					temp.VersionInfo.FileVersion
 				)
-				
-				--[[return temp.EntTables, temp.ConstraintTables, {},{}, 
-				temp.HeadEntityIdx, temp.HoldAngle, temp.HoldPos, false, 
-				temp.VersionInfo.Creator, temp.VersionInfo.Desc, temp.VersionInfo.NumOfEnts, 
+
+				--[[return temp.EntTables, temp.ConstraintTables, {},{},
+				temp.HeadEntityIdx, temp.HoldAngle, temp.HoldPos, false,
+				temp.VersionInfo.Creator, temp.VersionInfo.Desc, temp.VersionInfo.NumOfEnts,
 				temp.VersionInfo.NumOfConst, temp.VersionInfo.FileVersion--]]
-				
+
 			--Legacy versions, there are no version 0.5 files
 			elseif (temp) and (temp["VersionInfo"]) and (temp["VersionInfo"]["FileVersion"] <= 0.4) then
 				--MsgN("AdvDupe:Loaded old legacy file ",filepath,"  version: ",temp.VersionInfo.FileVersion)
-				
+
 				if (temp["VersionInfo"]["FileVersion"] <= 0.2) then
 					temp.DupeInfo = {}
 					for id, entTable in pairs(temp.Ents) do
@@ -304,24 +304,24 @@ function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 						end
 					end
 				end
-				
+
 				tool:LoadFileCallBack( filepath,
-					temp.Ents, temp.Constraints, temp.DupeInfo, 
-					(temp.DORInfo or {}), temp.HeadEntID, temp.HoldAngle, Vector(0,0,0), 
-					true, temp.VersionInfo.Creator, temp.VersionInfo.Desc, 
-					temp.VersionInfo.NumOfEnts, temp.VersionInfo.NumOfConst, 
+					temp.Ents, temp.Constraints, temp.DupeInfo,
+					(temp.DORInfo or {}), temp.HeadEntID, temp.HoldAngle, Vector(0,0,0),
+					true, temp.VersionInfo.Creator, temp.VersionInfo.Desc,
+					temp.VersionInfo.NumOfEnts, temp.VersionInfo.NumOfConst,
 					temp.VersionInfo.FileVersion
 				)
-				
-				--[[return temp.Ents, temp.Constraints, temp.DupeInfo, 
-				(temp.DORInfo or {}), temp.HeadEntID, temp.HoldAngle, Vector(0,0,0), 
-				true, temp.VersionInfo.Creator, temp.VersionInfo.Desc, 
-				temp.VersionInfo.NumOfEnts, temp.VersionInfo.NumOfConst, 
+
+				--[[return temp.Ents, temp.Constraints, temp.DupeInfo,
+				(temp.DORInfo or {}), temp.HeadEntID, temp.HoldAngle, Vector(0,0,0),
+				true, temp.VersionInfo.Creator, temp.VersionInfo.Desc,
+				temp.VersionInfo.NumOfEnts, temp.VersionInfo.NumOfConst,
 				temp.VersionInfo.FileVersion--]]
-				
+
 			elseif (temp) and (temp["Information"]) then --Old Contrpation Saver File
 				--Msg("AdvDupe:Loading old Contraption Saver file.\n")
-				
+
 				--find the lowest and use that as the head
 				local head,low
 				for k,v in pairs(temp.Entities) do
@@ -330,38 +330,38 @@ function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 						low = v.Pos.z
 					end
 				end
-				
+
 				--Convert the Pos and Angle keys to a system AdvDupe understands
 				AdvDupe.ConvertPositionsToLocal( temp.Entities, temp.Constraints, temp.Entities[head].Pos, Angle(0,0,0) )
-				
+
 				tool:LoadFileCallBack( filepath,
 					temp.Entities, temp.Constraints,
 					{},{}, head, Angle(0,0,0), Vector(0,0,0),
 					false, temp.Information.Creator, "Old Contrpaption Saver File",
-					temp.Information.Entities, temp.Information.Constraints, 
+					temp.Information.Entities, temp.Information.Constraints,
 					"Old Contrpaption Saver File", temp.Date
 				)
-				
+
 				--[[return temp.Entities, temp.Constraints,
 				{},{}, head, Angle(0,0,0), Vector(0,0,0),
 				false, temp.Information.Creator, "Old Contrpaption Saver File",
 				temp.Information.Entities, temp.Information.Constraints, "Old Contrpaption Saver File", temp.Date--]]
-				
-				
+
+
 			else
 				MsgN("AdvDupeERROR:FILE FAILED TO LOAD! something is wrong with this file:  ",filepath)
 				AdvDupe.SendClientError( ply, "Failed loading file" )
 				AdvDupe.SetPercent( ply, -1 )
 			end
-			
+
 			AdvDupe.SetPercent(ply, 50)
-			
+
 		end
-		
+
 		AdvDupe.SetPercent(ply, 30)
 		timer.Simple(.1, function() Load3( ply, filepath, tool, temp ) end)
 	end
-	
+
 	AdvDupe.SetPercent(ply, 10)
 	local f, temp = file.Open(dupeshare.ParsePath(filepath), "r", "DATA"), ""
 	if f then
@@ -369,7 +369,7 @@ function AdvDupe.LoadDupeTableFromFile( ply, filepath )
 		f:Close()
 	end
 	timer.Simple(.1, function() Load1( ply, filepath, tool, temp) end)
-	
+
 end
 
 
@@ -382,83 +382,83 @@ end
 
 	local SaveableEntities = {}
 	for k, v in pairs( EntityList ) do
-		
+
 		if AdvDupe.NewSave then
 			SaveableEntities[ k ] = AdvDupe.EntityArgsFromTable( v )
 		else
 			SaveableEntities[ k ] = AdvDupe.SaveableEntityFromTable( v )
 		end
-		
+
 		SaveableEntities[ k ].BoneMods = ( v.BoneMods ) --table.Copy
 		SaveableEntities[ k ].EntityMods = ( v.EntityMods )
 		SaveableEntities[ k ].PhysicsObjects = ( v.PhysicsObjects )
-		
+
 	end
-	
+
 	local SaveableConstraints = {}
 	for k, Constraint in pairs( ConstraintList ) do
-		
+
 		local SaveableConst = AdvDupe.SaveableConstraintFromTable( Constraint )
-		
+
 		if ( SaveableConst ) then
 			table.insert( SaveableConstraints, SaveableConst )
 		end
-		
+
 	end
-	
+
 	return SaveableEntities, SaveableConstraints
-	
+
 end
 
 function AdvDupe.StoreBasicsFromEntityTable( EntTable )
-	
+
 	local SaveableEntity = {}
 	SaveableEntity.Class = EntTable.Class
-	
+
 	if ( EntTable.Model ) then SaveableEntity.Model = EntTable.Model end
 	if ( EntTable.Angle ) then SaveableEntity.Angle = EntTable.Angle end
 	if ( EntTable.Pos ) then SaveableEntity.Pos = EntTable.Pos end
 	if ( EntTable.LocalPos ) then SaveableEntity.LocalPos = EntTable.LocalPos end
 	if ( EntTable.LocalAngle ) then SaveableEntity.LocalAngle = EntTable.LocalAngle end
-	
+
 	if ( EntTable.CollisionGroup ) then
 		if ( !EntTable.EntityMods ) then EntTable.EntityMods = {} end
 		EntTable.EntityMods.CollisionGroupMod = EntTable.CollisionGroup
 	end
-	
+
 	return SaveableEntity
-	
+
 end
 
 function AdvDupe.SaveableEntityFromTable( EntTable )
 
 	local EntityClass = duplicator.FindEntityClass( EntTable.Class )
 	local SaveableEntity = AdvDupe.StoreBasicsFromEntityTable( EntTable )
-	
+
 	if (!EntityClass) then
 		return SaveableEntity
 	end
-	
+
 	for iNumber, Key in pairs( EntityClass.Args ) do
-		
+
 		SaveableEntity[ Key ] = EntTable[ Key ]
-		
+
 	end
-	
+
 	return SaveableEntity
-	
+
 end
 
 function AdvDupe.SaveableConstraintFromTable( Constraint )
 
 	local Factory = duplicator.ConstraintType[ Constraint.Type ]
 	if ( !Factory ) then return end
-	
+
 	local SaveableConst = {}
 	SaveableConst.Type = Constraint.Type
 	SaveableConst.Entity = table.Copy( Constraint.Entity )
 	if (Constraint.Entity1) then SaveableConst.Entity1 = table.Copy( Constraint.Entity1 ) end
-	
+
 	for k, Key in pairs( Factory.Args ) do
 		if (!string.find(Key, "Ent") or string.len(Key) != 4)
 		and (!string.find(Key, "Bone") or string.len(Key) != 5)
@@ -467,21 +467,21 @@ function AdvDupe.SaveableConstraintFromTable( Constraint )
 			SaveableConst[ Key ] = Constraint[ Key ]
 		end
 	end
-	
+
 	return SaveableConst
 
 end--]]
 
 --[[function AdvDupe.EntityArgsFromTable( EntTable )
-	
+
 	local EntityClass = duplicator.FindEntityClass( EntTable.Class )
 	local SaveableEntity = AdvDupe.StoreBasicsFromEntityTable( EntTable )
-	
+
 	-- This class is unregistered. Just save the basics instead
 	if (!EntityClass) then
 		return SaveableEntity
 	end
-	
+
 	-- Build the argument list
 	local ArgList = {}
 	for iNumber, Key in pairs( EntityClass.Args ) do
@@ -499,11 +499,11 @@ end--]]
 			ArgList[ iNumber ] = Arg
 		end
 	end
-	
+
 	SaveableEntity.arglist = ArgList
-	
+
 	return SaveableEntity
-	
+
 end--]]
 
 
@@ -515,21 +515,21 @@ function AdvDupe.GetSaveableEntity( Ent, Offset )
 	if ( Ent.DoNotDuplicate ) then return end
 
 	if ( Ent.PreEntityCopy ) then Ent:PreEntityCopy() end
-	
+
 	--we're going to be a little distructive to this table, let's not use the orginal
 	local Tab = table.Copy( Ent:GetTable() )
-	
+
 	if ( Ent.PostEntityCopy ) then Ent:PostEntityCopy() end
-	
+
 	--let's junk up the table a little
 	Tab.Angle = Ent:GetAngles()
 	Tab.Pos = Ent:GetPos()
 	Tab.CollisionGroup = Ent:GetCollisionGroup()
-	
+
 	-- Physics Objects
 	Tab.PhysicsObjects =  Tab.PhysicsObjects or {}
 	local iNumPhysObjects = Ent:GetPhysicsObjectCount()
-	for Bone = 0, iNumPhysObjects-1 do 
+	for Bone = 0, iNumPhysObjects-1 do
 		local PhysObj = Ent:GetPhysicsObjectNum( Bone )
 		if ( PhysObj:IsValid() ) then
 			Tab.PhysicsObjects[ Bone ] = Tab.PhysicsObjects[ Bone ] or {}
@@ -539,7 +539,7 @@ function AdvDupe.GetSaveableEntity( Ent, Offset )
 			if PhysObj:IsGravityEnabled() == false then Tab.PhysicsObjects[ Bone ].NoGrav = true end
 		end
 	end
-	
+
 	-- Flexes (WTF are these?)
 	local FlexNum = Ent:GetFlexNum()
 	for i = 0, FlexNum do
@@ -547,10 +547,10 @@ function AdvDupe.GetSaveableEntity( Ent, Offset )
 		Tab.Flex[ i ] = Ent:GetFlexWeight( i )
 	end
 	Tab.FlexScale = Ent:GetFlexScale()
-	
+
 	-- Let the ent fuckup our nice new table if it wants too
 	if ( Ent.OnEntityCopyTableFinish ) then Ent:OnEntityCopyTableFinish( Tab ) end
-	
+
 	--moved from ConvertPositionsToLocal
 	Tab.Pos = Tab.Pos - Offset
 	Tab.LocalPos = Tab.Pos * 1
@@ -564,25 +564,25 @@ function AdvDupe.GetSaveableEntity( Ent, Offset )
 			Object.Angle = nil
 		end
 	end
-	
+
 	--Save CollisionGroupMod
 	if ( Tab.CollisionGroup ) then
 		if ( !Tab.EntityMods ) then Tab.EntityMods = {} end
 		Tab.EntityMods.CollisionGroupMod = Tab.CollisionGroup
 	end
-	
+
 	--fix for saving key on camera
 	if (Ent:GetClass() == "gmod_cameraprop") then
 		Tab.key = Ent:GetNetworkedInt("key")
 	end
-	
+
 	--Saveablity
 	local SaveableEntity = {}
 	SaveableEntity.Class		 = Ent:GetClass()
-	
+
 	-- escape the model string properly cause something out there rapes it sometimes
 	SaveableEntity.Model = table.concat( dupeshare.split( Ent:GetModel(), '\\+' ), "/" )
-	
+
 	SaveableEntity.Skin				= Ent:GetSkin()
 	SaveableEntity.LocalPos			= Tab.LocalPos
 	SaveableEntity.LocalAngle		= Tab.LocalAngle
@@ -590,14 +590,14 @@ function AdvDupe.GetSaveableEntity( Ent, Offset )
 	SaveableEntity.EntityMods		= table.Copy( Tab.EntityMods )
 	SaveableEntity.PhysicsObjects	= table.Copy( Tab.PhysicsObjects )
 	if Ent.GetNetworkVars then SaveableEntity.DT = Ent:GetNetworkVars() end
-	
+
 	if IsValid( Ent:GetParent() ) then
 		SaveableEntity.SavedParentIdx = Ent:GetParent():EntIndex()
 	end
-	
+
 	local EntityClass = duplicator.FindEntityClass( SaveableEntity.Class )
 	if (!EntityClass) then return SaveableEntity end -- This class is unregistered. Just save what we have so far
-	
+
 	--filter functions, we only want to save what will be used
 	for iNumber, key in pairs( EntityClass.Args ) do
 		--we dont need this crap, it's already added
@@ -606,10 +606,10 @@ function AdvDupe.GetSaveableEntity( Ent, Offset )
 			SaveableEntity[ key ] = Tab[ key ]
 		end
 	end
-	
+
 	--[[local ArgList = {}
 	for iNumber, Key in pairs( EntityClass.Args ) do
-		
+
 		-- Doesn't save space to prebuild the arglist when there is a data key, we'd end up with a self-nested table
 		if ( Key == "Data" ) then
 			for iNumber, key in pairs( EntityClass.Args ) do
@@ -622,7 +622,7 @@ function AdvDupe.GetSaveableEntity( Ent, Offset )
 			ArgList = nil
 			break
 		end
-		
+
 		if (key != "pos") and (key != "position") and (key != "Pos")
 		and (key != "ang") and (key != "Ang") and (key != "angle") and (key != "Angle") then
 			local Arg
@@ -635,11 +635,11 @@ function AdvDupe.GetSaveableEntity( Ent, Offset )
 			end
 			ArgList[ iNumber ] = Arg
 		end
-		
+
 	end
 	SaveableEntity.arglist = ArgList--]]
-	
-	return SaveableEntity	
+
+	return SaveableEntity
 end
 
 --
@@ -650,14 +650,14 @@ function AdvDupe.GetSaveableConst( ConstraintEntity, Offset )
 
 	-- Filter duplicator blocked constraint out.
 	if ConstraintEntity.DoNotDuplicate then return end
-	
+
 	local SaveableConst = {}
 	local ConstTable = ConstraintEntity:GetTable()
-	
+
 	local Factory = duplicator.ConstraintType[ ConstTable.Type ]
 	if ( Factory ) then
 		SaveableConst.Type = ConstTable.Type
-		
+
 		for k, Key in pairs( Factory.Args ) do
 			if (!string.find(Key, "Ent") or string.len(Key) != 4)
 			and (!string.find(Key, "Bone") or string.len(Key) != 5)
@@ -666,25 +666,25 @@ function AdvDupe.GetSaveableConst( ConstraintEntity, Offset )
 				SaveableConst[ Key ] = ConstTable[ Key ]
 			end
 		end
-		
+
 	else
 		table.Merge( SaveableConst, ConstraintEntity:GetTable() )
 	end
-	
+
 	if ( ConstTable.Type == "Elastic" ) or ( ConstTable.length ) then
 		SaveableConst.length = ConstTable.length
 	end
-	
+
 	SaveableConst.Entity = {}
 	local ents = {}
-	
+
 	if ( ConstTable[ "Ent" ] && ( ConstTable[ "Ent" ]:IsWorld() || ConstTable[ "Ent" ]:IsValid() ) ) then
-		
+
 		SaveableConst.Entity[ 1 ] = {}
 		SaveableConst.Entity[ 1 ].Index	 	= ConstTable[ "Ent" ]:EntIndex()
 		if ConstTable[ "Ent" ]:IsWorld() then SaveableConst.Entity[ 1 ].World = true end
 		SaveableConst.Entity[ 1 ].Bone 		= ConstTable[ "Bone" ]
-		
+
 	else
 		for i=1, 6 do
 			local entn = "Ent"..i
@@ -708,7 +708,7 @@ function AdvDupe.GetSaveableConst( ConstraintEntity, Offset )
 			end
 		end
 	end
-	
+
 	return SaveableConst, ents
 end
 
@@ -736,7 +736,7 @@ function AdvDupe.Copy( Ent, EntTable, ConstraintTable, Offset )
 
 	EntTable[ Ent:EntIndex() ] = AdvDupe.GetSaveableEntity( Ent, Offset )
 	if ( !constraint.HasConstraints( Ent ) ) then return EntTable, ConstraintTable end
-	
+
 	for key, ConstraintEntity in pairs( Ent.Constraints ) do
 		if ( !ConstraintTable[ ConstraintEntity ] ) and ConstraintEntity.Type != "" then
 			local ConstTable, ents = AdvDupe.GetSaveableConst( ConstraintEntity, Offset )
@@ -746,7 +746,7 @@ function AdvDupe.Copy( Ent, EntTable, ConstraintTable, Offset )
 			end
 		end
 	end
-	
+
 	return EntTable, ConstraintTable
 end
 
@@ -796,7 +796,7 @@ function AdvDupe.GetAllEnts( Ent, OrderedEntList, EntsTab, ConstsTab )
 	if Ent.DoNotDuplicate then
 		return OrderedEntList
 	end
-	
+
 	EntsTab[ Ent:EntIndex() ] = Ent
 	table.insert(OrderedEntList, Ent)
 	if ( !constraint.HasConstraints( Ent ) ) then return OrderedEntList end
@@ -811,7 +811,7 @@ function AdvDupe.GetAllEnts( Ent, OrderedEntList, EntsTab, ConstsTab )
 			end
 		end
 	end
-	
+
 	return OrderedEntList
 end
 
@@ -832,13 +832,13 @@ concommand.Add( "AdvDupe_NewSave", NewSaveSet )--]]
 --	some modifer functions
 --
 local function CollisionGroupModifier(ply, Ent, group )
-	
+
 	if ( group == 19 or group == COLLISION_GROUP_WORLD ) then --COLLISION_GROUP_WORLD is fucked up
 		Ent:SetCollisionGroup( COLLISION_GROUP_WORLD )
 	else
 		Ent:SetCollisionGroup( COLLISION_GROUP_NONE )
 	end
-	
+
 end
 duplicator.RegisterEntityModifier( "CollisionGroupMod", CollisionGroupModifier )
 
@@ -859,7 +859,7 @@ if (dupeshare and dupeshare.PublicDirs) then
 	for k, v in pairs(dupeshare.PublicDirs) do
 		local dir = (dupeshare.BaseDir.."/"..v):lower()
 		AdvDupe.PublicDirs[v] = dir
-		if ( !file.Exists(dir, "DATA") ) or ( file.Exists(dir, "DATA") and !file.IsDir(dir, "DATA") ) then 
+		if ( !file.Exists(dir, "DATA") ) or ( file.Exists(dir, "DATA") and !file.IsDir(dir, "DATA") ) then
 			file.CreateDir( dupeshare.ParsePath(dir), "DATA" )
 		end
 	end
@@ -868,18 +868,18 @@ end
 
 function AdvDupe.GetPlayersFolder(ply)
 	local dir = dupeshare.BaseDir
-	
+
 	if not game.SinglePlayer() then
 		local name = dupeshare.ReplaceBadChar(tostring(ply:SteamID()))
 		name = string.gsub(name, "STEAM_1", "STEAM_0") --I think this was needed cause Valve randomly changed everybody's IDs
-		
+
 		if (name == "STEAM_ID_LAN") or (name == "UNKNOWN") or (name == "STEAM_ID_PENDING") then
 			name = dupeshare.GetPlayerName(ply) or "unknown"
 		end
-		
+
 		dir = dir.."/"..name
 	end
-	
+
 	return dir:lower()
 end
 
@@ -887,49 +887,49 @@ end
 
 function AdvDupe.MakeDir(ply, cmd, args)
 	if !IsValid(ply) or !ply:IsPlayer() or !args[1] then return end
-	
+
 	local dir = AdvDupe[ply].cdir
 	local foldername = dupeshare.ReplaceBadChar(string.Implode(" ", args))
-	
+
 	AdvDupe.FileOpts(ply, "makedir", foldername, dir)
-	
+
 	--[[local dir = AdvDupe[ply].cdir.."/"..dupeshare.ReplaceBadChar(args[1])
-	
-	if file.Exists(dir) and file.IsDir(dir) then 
+
+	if file.Exists(dir) and file.IsDir(dir) then
 		AdvDupe.SendClientError(ply, "Folder Already Exists!")
 		return
 	end
-	
+
 	file.CreateDir(dir)--]]
-	
+
 	if (dupeshare.UsePWSys) and (!game.SinglePlayer()) then
 		--todo
 	end
-	
+
 	--AdvDupe.UpdateList(ply)
-	
+
 end
 concommand.Add("adv_duplicator_makedir", AdvDupe.MakeDir)
 
 local function FileOptsCommand(ply, cmd, args)
 	if !IsValid(ply) or !ply:IsPlayer() or !args[1] then return end
-	
+
 	local action = args[1]
 	--local filename = dupeshare.GetFileFromFilename(ply:GetInfo( "adv_duplicator_load_filename" ))..".txt"
 	local filename = ply:GetInfo( "adv_duplicator_load_filename" )
 	--local filename2 = ply:GetInfo( "adv_duplicator_load_filename2" )
 	local dir	= AdvDupe[ply].cdir
 	local dir2	= AdvDupe[ply].cdir2
-	
+
 	AdvDupe.FileOpts(ply, action, filename, dir, dir2)
-	
+
 end
 concommand.Add("adv_duplicator_fileopts", FileOptsCommand)
 
 local function FileOptsRenameCommand(ply, cmd, args)
 	--Msg("rename cmd\n")
 	if !IsValid(ply) or !ply:IsPlayer() or !args[1] then return end
-	
+
 	--local filename = dupeshare.GetFileFromFilename(ply:GetInfo( "adv_duplicator_load_filename" ))..".txt"
 	local filename = ply:GetInfo( "adv_duplicator_load_filename" )
 	local dir	= AdvDupe[ply].cdir
@@ -937,37 +937,37 @@ local function FileOptsRenameCommand(ply, cmd, args)
 	newname = dupeshare.ReplaceBadChar(dupeshare.GetFileFromFilename(newname))..".txt"
 	--MsgN("s-newname= ",newname)
 	AdvDupe.FileOpts(ply, "rename", filename, dir, newname)
-	
+
 end
 concommand.Add("adv_duplicator_fileoptsrename", FileOptsRenameCommand)
 
 function AdvDupe.FileOpts(ply, action, filename, dir, dir2)
 	if not filename or not dir then return end
-	
+
 	local file1 = (dir.."/"..filename):lower()
 	--MsgN("action= ",action,"  filename= ",filename,"  dir= ",dir,"  dir2= ",(dir2 or "none"))
-	
-	if not AdvDupe.CheckPerms(ply, "", dir, "access") then 
+
+	if not AdvDupe.CheckPerms(ply, "", dir, "access") then
 		AdvDupe.SendClientError(ply, "You lack access permissions in "..dir)
-		return 
+		return
 	end
-	
+
 	if (action == "delete") then
-		if not AdvDupe.CheckPerms(ply, "", dir, "delete") then 
+		if not AdvDupe.CheckPerms(ply, "", dir, "delete") then
 			AdvDupe.SendClientError(ply, "You lack delete permissions in "..dir)
-			return 
+			return
 		end
-		
+
 		file.Delete(dupeshare.ParsePath(file1))
 		AdvDupe.HideGhost(ply, false)
 		AdvDupe.UpdateList(ply)
-		
+
 	elseif (action == "copy") then
-		if not AdvDupe.CheckPerms(ply, "", dir2, "write") then 
+		if not AdvDupe.CheckPerms(ply, "", dir2, "write") then
 			AdvDupe.SendClientError(ply, "You lack write permissions in "..dir2)
-			return 
+			return
 		end
-		
+
 		local file2 = (dir2.."/"..filename):lower()
 		if file.Exists(file2, "DATA") then
 			local filename2 = ""
@@ -980,60 +980,60 @@ function AdvDupe.FileOpts(ply, action, filename, dir, dir2)
 		end
 		file.Write(dupeshare.ParsePath(file2), file.Read(dupeshare.ParsePath(file1), "DATA") or "")
 		AdvDupe.UpdateList(ply)
-		
+
 	elseif (action == "move") then
-		if not AdvDupe.CheckPerms(ply, "", dir, "delete") then 
+		if not AdvDupe.CheckPerms(ply, "", dir, "delete") then
 			AdvDupe.SendClientError(ply, "You lack delete permissions in "..dir)
-			return 
+			return
 		end
-		if not AdvDupe.CheckPerms(ply, "", dir2, "write") then 
+		if not AdvDupe.CheckPerms(ply, "", dir2, "write") then
 			AdvDupe.SendClientError(ply, "You lack write permissions in "..dir2)
-			return 
+			return
 		end
-		
+
 		if dir == dir2 then
 			AdvDupe.SendClientError(ply, "Cannot move file to same directory")
 			return
 		end
-		
+
 		AdvDupe.FileOpts(ply, "copy", filename, dir, dir2)
 		AdvDupe.FileOpts(ply, "delete", filename, dir)
-		
+
 	elseif (action == "makedir") then
-		if not AdvDupe.CheckPerms(ply, "", dir, "write") then 
+		if not AdvDupe.CheckPerms(ply, "", dir, "write") then
 			AdvDupe.SendClientError(ply, "You lack write permissions in "..dir)
-			return 
+			return
 		end
-		
+
 		if !game.SinglePlayer() and dupeshare.NamedLikeAPublicDir(filename) then
 			AdvDupe.SendClientError(ply, "You Cannot Name a Folder Like a Public Folder")
 			return
 		end
-		
-		if file.Exists(file1, "DATA") and file.IsDir(file1, "DATA") then 
+
+		if file.Exists(file1, "DATA") and file.IsDir(file1, "DATA") then
 			AdvDupe.SendClientError(ply, "Folder Already Exists!")
 			return
 		end
-		
+
 		file.CreateDir(dupeshare.ParsePath(file1), "DATA")
 		AdvDupe.HideGhost(ply, false)
 		AdvDupe.UpdateList(ply)
-		
+
 	elseif (action == "rename") then
-		if not (AdvDupe.CheckPerms(ply, "", dir, "delete") and AdvDupe.CheckPerms(ply, "", dir, "write")) then 
+		if not (AdvDupe.CheckPerms(ply, "", dir, "delete") and AdvDupe.CheckPerms(ply, "", dir, "write")) then
 			AdvDupe.SendClientError(ply, "You lack delete permissions in "..dir)
-			return 
+			return
 		end
-		
+
 		AdvDupe.FileOpts(ply, "duplicate", filename, dir, dir2)
 		AdvDupe.FileOpts(ply, "delete", filename, dir)
-		
+
 	elseif (action == "duplicate") then
-		if not AdvDupe.CheckPerms(ply, "", dir, "write") then 
+		if not AdvDupe.CheckPerms(ply, "", dir, "write") then
 			AdvDupe.SendClientError(ply, "You lack delete permissions in "..dir)
-			return 
+			return
 		end
-		
+
 		local file2 = (dir.."/"..dir2):lower() --using dir2 to hold the new filename
 		if file.Exists(file2, "DATA") then
 			local filename2 = ""
@@ -1042,23 +1042,23 @@ function AdvDupe.FileOpts(ply, action, filename, dir, dir2)
 		end
 		file.Write(dupeshare.ParsePath(file2), file.Read(dupeshare.ParsePath(file1), "DATA") or "")
 		AdvDupe.UpdateList(ply)
-		
+
 	else
 		AdvDupe.SendClientError(ply, "FileOpts: Bad Action Command!")
 	end
-	
+
 end
 
 --TODO
 function AdvDupe.CheckPerms(ply, dir, password, action)
-	
+
 	if (dupeshare.UsePWSys) and (!game.SinglePlayer()) then
 		--todo
 		return true
 	else
 		return true
 	end
-	
+
 	AdvDupe.SendClientError(ply, "Permission error!")
 end
 
@@ -1113,7 +1113,7 @@ function AdvDupe.SetPasting(ply, Pasting)
 	if ( !IsValid(ply) or !ply:IsPlayer() ) then return end
 	AdvDupe[ply] = AdvDupe[ply] or {}
 	AdvDupe[ply].Pasting = Pasting
-	
+
 	umsg.Start("AdvDupeSetPasting", ply)
 		umsg.Bool(Pasting)
 	umsg.End()
@@ -1141,7 +1141,7 @@ function AdvDupe.GetAdvDupeToolObj(ply)
 	if ( dupeshare.CurrentToolIsDuplicator(tool) ) then
 		return tool:GetTable():GetToolObject()
 	end
-	return 
+	return
 end
 
 
@@ -1343,27 +1343,27 @@ end
 function AdvDupe.AdminSettings.SetPlayerToDefault( ply )
 	if ( !IsValid(ply) or !ply:IsPlayer() ) then return end
 	PlayerSettings[ply] = {}
-	
+
 	--upload
 	--[[PlayerSettings[ply].UploadPiecesPerSend = UploadPiecesPerSend
 	PlayerSettings[ply].UploadSendDelay = UploadSendDelay
 	PlayerSettings[ply].MaxUploadSize = MaxUploadSize--]]
 	AdvDupe.AdminSettings.UploadSettings( ply, UploadPiecesPerSend, UploadSendDelay, MaxUploadSize )
-	
+
 	--download
 	--[[PlayerSettings[ply].DownloadPiecesPerSend = DownloadPiecesPerSend
 	PlayerSettings[ply].DownloadSendInterval = DownloadSendInterval
 	PlayerSettings[ply].CanDownload = CanDownload--]]
 	AdvDupe.AdminSettings.DownloadSettings( ply, DownloadPiecesPerSend, DownloadSendInterval, CanDownload )
-	
+
 	--ghost
 	--[[PlayerSettings[ply].LimitedGhost = LimitedGhost
 	PlayerSettings[ply].GhostLimitNorm = GhostLimitNorm
 	PlayerSettings[ply].GhostLimitLimited = GhostLimitLimited--]]
 	AdvDupe.AdminSettings.GhostSettings( ply, GhostLimitNorm, GhostLimitLimited, GhostAddDelay, GhostsPerTick, LimitedGhost )
-	
+
 	--PrintTable(PlayerSettings[ply])
-	
+
 	--update client side vars too
 	--[[SendUploadSettings( ply, UploadPiecesPerSend, UploadSendDelay )
 	SendMaxUploadSize( ply, MaxUploadSize )
@@ -1386,7 +1386,7 @@ net.Receive("AdvDupeUploadStart", function(netlen, ply)
 		MsgN("player ",tostring(ply)," not allowed to upload")
 		return
 	end
-	
+
 	if not AdvDupe[ply] then AdvDupe[ply] = {} end
 	AdvDupe[ply].uploadLast = net.ReadUInt(16)
 	if ( GetMaxUpload(ply) > 0 and (AdvDupe[ply].uploadLast - 1) * 64000 > GetMaxUpload(ply) ) then
@@ -1395,20 +1395,20 @@ net.Receive("AdvDupeUploadStart", function(netlen, ply)
 		net.Start("AdvDupeUploadOK") net.WriteBit(false) net.Send(ply)
 		return
 	end
-	
+
 	AdvDupe[ply].uploadFilename = net.ReadString()
 	AdvDupe[ply].uploadBuffer = ""
 	AdvDupe[ply].uploadDir = AdvDupe[ply].cdir
-	
+
 	net.Start("AdvDupeUploadOK") net.WriteBit(true) net.Send(ply)
 end)
 
 net.Receive("AdvDupeUploadData", function(netlen, ply)
 	if not ply:IsValid() or not AdvDupe[ply].uploadBuffer then return end
-	
+
 	local datalen = net.ReadUInt(16)
 	AdvDupe[ply].uploadBuffer = AdvDupe[ply].uploadBuffer .. net.ReadData(datalen)
-	
+
 	if net.ReadBit() != 0 then
 		local filepath = dupeshare.FileNoOverWriteCheck( AdvDupe[ply].uploadDir, AdvDupe[ply].uploadFilename )
 		AdvDupe.RecieveFileContentSave( ply, filepath )
@@ -1417,24 +1417,24 @@ end)
 
 function AdvDupe.RecieveFileContentSave( ply, filepath )
 	if not ply:IsValid() or not AdvDupe[ply].uploadBuffer then return end
-	
+
 	local uploaded = util.Decompress(AdvDupe[ply].uploadBuffer)
 	local FileName = dupeshare.GetFileFromFilename( filepath )
-	
+
 	if not uploaded then
 		AdvDupe.SendClientError(ply, "ERROR: '"..FileName.."', failed uploading", true)
 		AdvDupe.SendClientInfoMsg(ply, "Try resending it.", true)
-		
+
 		ply:PrintMessage(HUD_PRINTCONSOLE, "AdvDupeERROR: Your file, '"..FileName.."', was not recieved properly")
 		MsgN("AdvDupe: This file, '",filepath,"', was not recieved properly")
 	else
-	
+
 		file.Write(dupeshare.ParsePath(filepath), uploaded)
 		AdvDupe[ply].uploadBuffer = nil
-		
+
 		AdvDupe.SendClientInfoMsg(ply, "Your file: '"..FileName.."' was uploaded to the server")
 		ply:PrintMessage(HUD_PRINTCONSOLE, "Your file: '"..FileName.."' was uploaded to the server")
-		
+
 		AdvDupe.UpdateList(ply)
 	end
 	net.Start("AdvDupeUploadOK") net.WriteBit(false) net.Send(ply)
@@ -1453,11 +1453,11 @@ function AdvDupe.SendSaveToClient( ply, filename )
 	if ( !CanDownload( ply ) ) then return end
 	if (!AdvDupe[ply]) then AdvDupe[ply] = {} end
 	if (AdvDupe.SendBuffer[ply]) then return end --then were sending already and give up
-	
+
 	local filepath = filename
 	local dir = "adv_duplicator"
 	local ndir = dir.."/"..dupeshare.GetPlayerName(ply)
-	
+
 	if !file.Exists(filepath, "DATA") then --if filepath was just a file name then try to find the file, for sending from list
 		if !file.Exists(dir.."/"..filename, "DATA") && !file.Exists(ndir.."/"..filename, "DATA") then
 			--MsgN("AdvDupe: File not found: \"",filepath,"\"")
@@ -1466,31 +1466,31 @@ function AdvDupe.SendSaveToClient( ply, filename )
 		if ( file.Exists(ndir.."/"..filename, "DATA") ) then filepath = ndir.."/"..filename end
 		if ( file.Exists(dir.."/"..filename, "DATA") ) then filepath = dir.."/"..filename end
 	end
-	
+
 	filename = dupeshare.GetFileFromFilename(filepath)
-	
+
 	local f, temp = file.Open(dupeshare.ParsePath(filepath), "r", "DATA"), ""
 	if f then
 		temp = f:Read( f:Size() )
 		f:Close()
 	end
 	AdvDupe.SendBuffer[ply] = util.Compress(temp)
-	
+
 	-- Consider compression
-	
+
 	local last = math.ceil(#AdvDupe.SendBuffer[ply] / 64000)
-	
+
 	net.Start("AdvDupeDownloadStart")
 		net.WriteUInt(last,16)
 		net.WriteString(filename)
 	net.Send(ply)
-	
+
 	AdvDupe.SendSaveToClientData( ply, 1, last )
 end
 
 function AdvDupe.SendSaveToClientData(ply, offset, last)
 	if not IsValid(ply) or not AdvDupe.SendBuffer[ply] then return end
-		
+
 	local SubStrStart = (offset - 1) * 64000
 	net.Start("AdvDupeDownloadData")
 		local towrite = AdvDupe.SendBuffer[ply]:sub( SubStrStart, SubStrStart + 64000 - 1 )
@@ -1500,7 +1500,7 @@ function AdvDupe.SendSaveToClientData(ply, offset, last)
 		if offset <= last then
 			net.WriteBit(false) -- Not last chunk
 			timer.Create( "AdvDupe.SendSaveToClientData_"..ply:UniqueID(), 0.5, 1, function()
-				AdvDupe.SendSaveToClientData( ply, offset, last ) 
+				AdvDupe.SendSaveToClientData( ply, offset, last )
 			end)
 		else
 			net.WriteBit(true) -- This is the last chunk
@@ -1550,7 +1550,7 @@ local DontAllowPlayersAdminOnlyEnts = true
 --	leave SetPostEntityPastePerTick at the default, it doesn't do much outside of wire and life support
 local function SetTimedPasteVars(ply, cmd, args)
 	if ( args[1] ) and ( ( ply:IsAdmin() ) or ( ply:IsSuperAdmin( )() ) ) then
-		if args[1] then 
+		if args[1] then
 			UseTimedPasteThreshold = tonumber( args[1] )
 		end
 		if args[2] then
@@ -1604,7 +1604,7 @@ function AdvDupe.AdminSettings.SetPasterClearToPasteDelay( a ) if isnumber(a) th
 local function SetUseTaskSwitchingPaste(ply, cmd, args)
 	if ( !ply:IsAdmin() and !ply:IsSuperAdmin( )() ) then return end
 	if ( args[1] ) then
-		if args[1] == "1" or args[1] == 1 then 
+		if args[1] == "1" or args[1] == 1 then
 			UseTaskSwitchingPaste = true
 		elseif args[1] == "0" or args[1] == 0 then
 			UseTaskSwitchingPaste = false
@@ -1627,7 +1627,7 @@ end
 local function SetDoPasteFX(ply, cmd, args)
 	if ( !ply:IsAdmin() and !ply:IsSuperAdmin( )() ) then return end
 	if ( args[1] ) then
-		if args[1] == "1" or args[1] == 1 then 
+		if args[1] == "1" or args[1] == 1 then
 			DoPasteFX = true
 		elseif args[1] == "0" or args[1] == 0 then
 			DoPasteFX = false
@@ -1650,7 +1650,7 @@ end
 local function SetDebugWeldsByDrawingThem(ply, cmd, args)
 	if ( !ply:IsAdmin() and !ply:IsSuperAdmin( )() ) then return end
 	if ( args[1] ) then
-		if args[1] == "1" or args[1] == 1 then 
+		if args[1] == "1" or args[1] == 1 then
 			DebugWeldsByDrawingThem = true
 		elseif args[1] == "0" or args[1] == 0 then
 			DebugWeldsByDrawingThem = false
@@ -1673,7 +1673,7 @@ end
 local function SetDontAllowPlayersAdminOnlyEnts(ply, cmd, args)
 	if ( !ply:IsAdmin() and !ply:IsSuperAdmin( )() ) then return end
 	if ( args[1] ) then
-		if args[1] == "1" or args[1] == 1 then 
+		if args[1] == "1" or args[1] == 1 then
 			DontAllowPlayersAdminOnlyEnts = true
 		elseif args[1] == "0" or args[1] == 0 then
 			DontAllowPlayersAdminOnlyEnts = false
@@ -1715,7 +1715,7 @@ local NextPasteTime = 0
 local LastDelay = 0
 local Timers = {}
 local function AdvDupeThink()
-	
+
 	if (CurTime() >= NextPasteTime) then
 		NextPasteTime = CurTime() +  .08
 		if TimedPasteData[TimedPasteDataCurrent] then
@@ -1732,64 +1732,64 @@ local function AdvDupeThink()
 				NextPasteTime = CurTime() +  .08
 			else
 				if ( TimedPasteData[TimedPasteDataCurrent].NormPaste ) and ( TimedPasteData[TimedPasteDataCurrent].Delay < CurTime() ) then
-					
+
 					local NoFail, Result = xpcall( AdvDupe.NormPasteFromTable, debug.traceback, TimedPasteData[TimedPasteDataCurrent] )
 					if ( !NoFail ) then
 						MsgN("AdvDupeERROR: NormPaste Failed, Error: ",tostring(Result))
 					end
-					
+
 					AdvDupe.FinishPasting( TimedPasteData, TimedPasteDataCurrent )
-					
+
 					NextPasteTime = CurTime() + DelayAfterPaste
-					
+
 				elseif ( TimedPasteData[TimedPasteDataCurrent].Delay < CurTime() ) then
-					
+
 					local NoFail, Result = xpcall( AdvDupe.OverTimePasteProcessFromTable, debug.traceback )
 					if ( !NoFail ) then
 						MsgN("AdvDupeERROR: OverTimePaste Failed in stage ",(TimedPasteData[TimedPasteDataCurrent].Stage or "BadStage"),", Error: ",tostring(Result))
 						TimedPasteData[TimedPasteDataCurrent].Stage = 5
 					end
-					
+
 					TimedPasteData[TimedPasteDataCurrent].CallsInRun = TimedPasteData[TimedPasteDataCurrent].CallsInRun + 1
-					
+
 					if ( TimedPasteData[TimedPasteDataCurrent].Stage ) and ( TimedPasteData[TimedPasteDataCurrent].Stage == 5 ) then
-						
+
 						--Msg("==TotalTicks= "..TimedPasteData[TimedPasteDataCurrent].TotalTicks.."\n")
 						--Msg("==CallsInRun = "..TimedPasteData[TimedPasteDataCurrent].CallsInRun.."\n")
 						--Msg("==LastDelay = "..LastDelay.."\n")
-						
+
 						AdvDupe.FinishPasting( TimedPasteData,TimedPasteDataCurrent )
-						
+
 						NextPasteTime = CurTime() +  DelayAfterPaste
-						
+
 					else
-						
+
 						if ( !TimedPasteData[TimedPasteDataCurrent].DontRemoveThinger ) then
-							AdvDupe.SetPercent(TimedPasteData[TimedPasteDataCurrent].Player, 
+							AdvDupe.SetPercent(TimedPasteData[TimedPasteDataCurrent].Player,
 								(TimedPasteData[TimedPasteDataCurrent].CallsInRun / TimedPasteData[TimedPasteDataCurrent].TotalTicks) * 100)
 						end
-						
+
 						LastDelay = .08 + .01 * TimedPasteData[TimedPasteDataCurrent].CallsInRun / 20
-						
+
 						NextPasteTime = CurTime() + LastDelay
-						
+
 					end
-					
+
 				end
-				
+
 				--task switching mode
 				if ( UseTaskSwitchingPaste) and ( TimedPasteData[TimedPasteDataCurrent + 1] ) then
 					TimedPasteDataCurrent = TimedPasteDataCurrent + 1
 				elseif ( UseTaskSwitchingPaste ) then
 					TimedPasteDataCurrent = 1
 				end
-				
+
 			end
 		elseif TimedPasteDataCurrent != 1 then
 			TimedPasteDataCurrent = 1
 		end
 	end
-	
+
 	-- Run Special Timers
 	for key, value in pairs( Timers ) do
 		if ( value.Finish <= CurTime() ) then
@@ -1806,7 +1806,7 @@ local function AdvDupeThink()
 			Timers[ key ] = nil
 		end
 	end
-	
+
 end
 hook.Add("Think", "AdvDupe_Think", AdvDupeThink)
 
@@ -1814,8 +1814,8 @@ hook.Add("Think", "AdvDupe_Think", AdvDupeThink)
 local function ReAddAdvDupeThink( ply, cmd, args )
 	hook.Add("Think", "AdvDupe_Think", AdvDupeThink)
 	ply:PrintMessage(HUD_PRINTCONSOLE, "ReAdded AdvDupe_Think Hook\n")
-end 
-concommand.Add( "AdvDupe_ReAdd_Think", ReAddAdvDupeThink ) 
+end
+concommand.Add( "AdvDupe_ReAdd_Think", ReAddAdvDupeThink )
 --	RestartAdvDupeThink clears all current pasting and restarts the hook, good to clear a paste that keeps bailing the hook each time it tries to run
 local function RestartAdvDupeThink( ply, cmd, args )
 	if ( !ply:IsAdmin() and !ply:IsSuperAdmin( )() ) then return end
@@ -1823,7 +1823,7 @@ local function RestartAdvDupeThink( ply, cmd, args )
 	TimedPasteDataNum = 0
 	TimedPasteDataCurrent = 1
 	NextPasteTime = 0
-	
+
 	for n,d in pairs(TimedPasteData) do
 		if ( d.Shooting_Ent ) and IsValid( d.Shooting_Ent.Entity ) then
 			d.Shooting_Ent.Entity:Remove()
@@ -1831,41 +1831,41 @@ local function RestartAdvDupeThink( ply, cmd, args )
 		d = nil
 	end
 	TimedPasteData = {}
-	
+
 	hook.Add("Think", "AdvDupe_Think", AdvDupeThink)
-	
+
 	ply:PrintMessage(HUD_PRINTCONSOLE, "Restarted AdvDupe_Think Hook\n")
-end 
-concommand.Add( "AdvDupe_Restart_Think", RestartAdvDupeThink ) 
+end
+concommand.Add( "AdvDupe_Restart_Think", RestartAdvDupeThink )
 
 
 
 function AdvDupe.MakeTimer( Delay, Func, FuncArgs, OnFailFunc, OnFailArgs )
 	if ( !Delay or !Func ) then Msg("AdvDupe.MakeTimer: Missings arg\n"); return end
-	
+
 	FuncArgs = FuncArgs or {}
 	OnFailArgs = OnFailArgs or {}
-	
+
 	local timer			= {}
 	timer.Finish		= CurTime() + Delay --UnPredictedCurTime()
 	timer.Func			= Func
 	timer.FuncArgs		= FuncArgs
 	timer.OnFailFunc	= OnFailFunc
 	timer.OnFailArgs	= OnFailArgs
-	
+
 	table.insert( Timers, timer )
-	
+
 	hook.Add("Think", "AdvDupe_Think", AdvDupeThink)
-	
+
 	return true;
-	
+
 end
 
 
 
 
 local function MakeThinger(Player, Hide)
-	
+
 	local Shooting_Ent = ents.Create( "base_gmodentity" )
 		Shooting_Ent:SetModel( "models/props_lab/labpart.mdl" )
 		Shooting_Ent:SetAngles( Player:GetAimVector():Angle() )
@@ -1885,7 +1885,7 @@ local function MakeThinger(Player, Hide)
 		undo.AddEntity( Shooting_Ent )
 		undo.SetPlayer( Player )
 	undo.Finish()
-	
+
 	return Shooting_Ent
 end
 
@@ -1901,7 +1901,7 @@ end
 function AdvDupe.StartPaste( Player, inEntityList, inConstraintList, HeadEntityIdx, HitPos, HoldAngle, NumOfEnts, NumOfConst, PasteFrozen, PastewoConst, CallOnPasteFin, DontRemoveThinger, Thinger, FromPaster )
 	hook.Add("Think", "AdvDupe_Think", AdvDupeThink)
 	hook.Run("AdvDupe_StartPasting", Player, NumOfEnts)
-	
+
 	if ( FromPaster ) and ( NumOfEnts + NumOfConst > PasterInstantPasteThreshold ) then
 		local CreatedEntities, CreatedConstraints = {},{}
 		AdvDupe.NormPaste( Player, inEntityList, inConstraintList, HeadEntityIdx, HitPos, HoldAngle, Thinger, PasteFrozen, PastewoConst, CreatedEntities, CreatedConstraints )
@@ -1940,18 +1940,18 @@ function AdvDupe.AddDelayedPaste( Player, EntityList, ConstraintList, HeadEntity
 		},
 		CreatedConstraints = {},
 	}
-	
+
 	if not IsValid(Thinger) then
 		T.Shooting_Ent      = MakeThinger(Player, HideThinger)
 		T.DontRemoveThinger = nil
 	end
-	
+
 	table.insert(TimedPasteData, T)
-	
+
 end
 
 function AdvDupe.NormPasteFromTable( PasteData )
-	AdvDupe.NormPaste( PasteData.Player, PasteData.EntityList, PasteData.ConstraintList, 
+	AdvDupe.NormPaste( PasteData.Player, PasteData.EntityList, PasteData.ConstraintList,
 		PasteData.HeadEntityIdx, PasteData.HitPos, PasteData.HoldAngle, PasteData.Shooting_Ent,
 		PasteData.PasteFrozen, PasteData.PastewoConst, PasteData.CreatedEntities, PasteData.CreatedConstraints)
 end
@@ -1959,38 +1959,38 @@ end
 function AdvDupe.GetUndoDescription(Player)
 	local gmod_tool = Player:GetWeapon("gmod_tool")
 	if not gmod_tool:IsValid() then return "AdvDupe" end
-	
+
 	local self = gmod_tool.Tool.adv_duplicator
 	if not self.Info then return "AdvDupe" end
-	
+
 	local path = self.Info.FilePath
 	if not path then return "AdvDupe" end
-	
+
 	path = path:match("([^/\\]*)%.txt$")
 	if not path then return "AdvDupe" end
-	
+
 	return "AdvDupe ("..path..")"
 end
 
 function AdvDupe.NormPaste( Player, EntityList, ConstraintList, HeadEntityIdx, Offset, HoldAngle, Shooting_Ent, PasteFrozen, PastewoConst, CreatedEntities, CreatedConstraints )
-	
+
 	--do the effect
 	--[[if (DoPasteFX) then
 		Shooting_Ent:EmitSound( "Airboat.FireGunRevDown" )
 		TingerFX( Shooting_Ent, HitPos )
 	end--]]
-	
+
 	--Msg("===doing delayed paste===\n")
 	AdvDupe.Paste( Player, EntityList, ConstraintList, HeadEntityIdx, Offset, HoldAngle, Shooting_Ent, PastewoConst, CreatedEntities, CreatedConstraints )
-	
+
 	CreatedEntities.EntityList = nil
 	local desc = AdvDupe.GetUndoDescription(Player)
 	undo.Create( desc )
 		undo.SetCustomUndoText( "Undone "..desc )
-		
+
 		for EntID, Ent in pairs( CreatedEntities ) do
 			undo.AddEntity( Ent )
-			
+
 			if ( PasteFrozen or PastewoConst ) then --and (Ent:GetPhysicsObject():IsValid()) then
 				AdvDupe.FreezeEntity( Player, Ent, true )
 				--[[local Phys = Ent:GetPhysicsObject()
@@ -1998,11 +1998,11 @@ function AdvDupe.NormPaste( Player, EntityList, ConstraintList, HeadEntityIdx, O
 				Phys:EnableMotion(false)
 				Player:AddFrozenPhysicsObject( Ent, Phys )--]]
 			end
-			
+
 			if ( !PastewoConst ) then
 				AdvDupe.ApplyParenting( Ent, EntID, EntityList, CreatedEntities )
 			end
-			
+
 			-- Resets the positions of all the entities in the table
 			EntTable = EntityList[ EntID ]
 			EntTable.Pos = EntTable.LocalPos * 1
@@ -2013,69 +2013,69 @@ function AdvDupe.NormPaste( Player, EntityList, ConstraintList, HeadEntityIdx, O
 					Object.Angle = Object.LocalAngle * 1
 				end
 			end
-			
+
 		end
-		
+
 		undo.SetPlayer( Player )
-		
+
 	undo.Finish()
-	
-	
-	
+
+
+
 	--AdvDupe.ResetPositions( EntityList, ConstraintList )
-	
+
 end
 
 function AdvDupe.Paste( Player, EntityList, ConstraintList, HeadEntityIdx, Offset, HoldAngle, Shooting_Ent, PastewoConst, CreatedEntities, CreatedConstraints )
-	
+
 	--local CreatedEntities = {}
-	
+
 	--
 	-- Create the Entities
 	--
 	for EntID, EntTable in pairs( EntityList ) do
-		
+
 		CreatedEntities[ EntID ] = AdvDupe.PasteEntity( Player, EntTable, EntID, Offset, HoldAngle )
-		
+
 	end
-	
+
 	--
 	-- Apply modifiers to the created entities
 	--
-	for EntID, Ent in pairs( CreatedEntities ) do	
-		
+	for EntID, Ent in pairs( CreatedEntities ) do
+
 		--AdvDupe.AfterPasteApply( Player, Ent, CreatedEntities )
 		local NoFail, Result = xpcall( AdvDupe.AfterPasteApply, debug.traceback, Player, Ent, CreatedEntities )
 		if ( !NoFail ) then
 			MsgN("AdvDupeERROR: AfterPasteApply, Error: ",tostring(Result))
 		end
-		
+
 	end
-	
-	
+
+
 	--local CreatedConstraints = {}
-	
+
 	--
 	-- Create constraints
 	--
 	if ( !PastewoConst ) and ( ConstraintList ) then
 		for k, Constraint in pairs( ConstraintList ) do
-			
+
 			if ( Constraint.Type and Constraint.Type != "" ) then
 				local Entity = AdvDupe.CreateConstraintFromTable( Player, Constraint, CreatedEntities, Offset, HoldAngle )
-				
+
 				if IsValid( Entity ) then
 					table.insert( CreatedConstraints, Entity )
 				else
 					MsgN("AdvDupeERROR:Could not make constraint type: ",(Constraint.Type or "NIL"))
 				end
 			end
-			
+
 		end
 	end
-	
+
 	--return CreatedEntities, CreatedConstraints
-	
+
 end
 
 
@@ -2083,7 +2083,7 @@ end
 --	Paste of time
 --
 function AdvDupe.OverTimePasteStart( Player, inEntityList, inConstraintList, HeadEntityIdx, HitPos, HoldAngle, NumOfEnts, NumOfConst, PasteFrozen, PastewoConst, CallOnPasteFin, DontRemoveThinger, Thinger )
-	
+
 	local EntityList = {}
 	local EntIDList = {}
 	EntIDList[1] = HeadEntityIdx
@@ -2093,12 +2093,12 @@ function AdvDupe.OverTimePasteStart( Player, inEntityList, inConstraintList, Hea
 			table.insert( EntIDList, EntID )
 		end
 	end
-	
+
 	local ConstraintList = {}
 	for ConstID, ConstTable in pairs( inConstraintList ) do
 		table.insert(ConstraintList, ConstTable)
 	end
-	
+
 	T						= {}
 	T.Player				= Player
 	T.EntityList			= EntityList
@@ -2128,22 +2128,22 @@ function AdvDupe.OverTimePasteStart( Player, inEntityList, inConstraintList, Hea
 	end
 	T.PasteFrozen			= PasteFrozen
 	T.PastewoConst			= PastewoConst
-	
+
 	table.insert(TimedPasteData, T)
-	
+
 end
 
 function AdvDupe.OverTimePasteProcessFromTable()
 	AdvDupe.OverTimePasteProcess(
-		TimedPasteData[TimedPasteDataCurrent].Player, 
-		TimedPasteData[TimedPasteDataCurrent].EntityList, 
-		TimedPasteData[TimedPasteDataCurrent].ConstraintList, 
-		TimedPasteData[TimedPasteDataCurrent].HeadEntityIdx, 
-		TimedPasteData[TimedPasteDataCurrent].Stage, 
-		TimedPasteData[TimedPasteDataCurrent].LastID, 
-		TimedPasteData[TimedPasteDataCurrent].EntIDList, 
-		TimedPasteData[TimedPasteDataCurrent].CreatedEntities, 
-		TimedPasteData[TimedPasteDataCurrent].CreatedConstraints, 
+		TimedPasteData[TimedPasteDataCurrent].Player,
+		TimedPasteData[TimedPasteDataCurrent].EntityList,
+		TimedPasteData[TimedPasteDataCurrent].ConstraintList,
+		TimedPasteData[TimedPasteDataCurrent].HeadEntityIdx,
+		TimedPasteData[TimedPasteDataCurrent].Stage,
+		TimedPasteData[TimedPasteDataCurrent].LastID,
+		TimedPasteData[TimedPasteDataCurrent].EntIDList,
+		TimedPasteData[TimedPasteDataCurrent].CreatedEntities,
+		TimedPasteData[TimedPasteDataCurrent].CreatedConstraints,
 		TimedPasteData[TimedPasteDataCurrent].Shooting_Ent,
 		TimedPasteDataCurrent,
 		TimedPasteData[TimedPasteDataCurrent].HitPos,
@@ -2153,58 +2153,58 @@ function AdvDupe.OverTimePasteProcessFromTable()
 end
 
 function AdvDupe.OverTimePasteProcess( Player, EntityList, ConstraintList, HeadEntityIdx, Stage, LastID, EntIDList, CreatedEntities, CreatedConstraints, Shooting_Ent, DataNum, Offset, HoldAngle, PasteFrozen, PastewoConst )
-	
+
 	if Stage == 1 then
-		
+
 		if (DoPasteFX) then Shooting_Ent:EmitSound( "Airboat.FireGunRevDown" ) end
-		
+
 		for i = 1,PasteEntsPerTick do
 			if EntIDList[ LastID ] then
-				
+
 				local EntID		= EntIDList[ LastID ]
 				local EntTable	= EntityList[ EntID ]
-				
+
 				--[[CreatedEntities[ EntID ] = AdvDupe.CreateEntityFromTable( Player, EntTable, EntID, Offset, HoldAngle )
-				
+
 				if ( CreatedEntities[ EntID ] and CreatedEntities[ EntID ]:IsValid() )
 				and not ( CreatedEntities[ EntID ].AdminSpawnable and !game.SinglePlayer() and (!Player:IsAdmin( ) or !Player:IsSuperAdmin() ) and DontAllowPlayersAdminOnlyEnts ) then
-					
+
 					Player:AddCleanup( "duplicates", CreatedEntities[ EntID ] )
-					
+
 					CreatedEntities[ EntID ].BoneMods = table.Copy( EntTable.BoneMods )
 					CreatedEntities[ EntID ].EntityMods = table.Copy( EntTable.EntityMods )
 					CreatedEntities[ EntID ].PhysicsObjects = table.Copy( EntTable.PhysicsObjects )
-					
+
 					local NoFail, Result = pcall( duplicator.ApplyEntityModifiers, Player, CreatedEntities[ EntID ] )
 					if ( !NoFail ) then
 						Msg("AdvDupeERROR: ApplyEntityModifiers, Error: "..tostring(Result).."\n")
 					end
-					
+
 					local NoFail, Result = pcall( duplicator.ApplyBoneModifiers, Player, CreatedEntities[ EntID ] )
 					if ( !NoFail ) then
 						Msg("AdvDupeERROR: ApplyBoneModifiers Error: "..tostring(Result).."\n")
 					end
-					
+
 					--freeze it and make it not solid so it can't be altered while the rest is made
 					if (CreatedEntities[ EntID ]:GetPhysicsObject():IsValid()) then
 						CreatedEntities[ EntID ]:GetPhysicsObject():Sleep()
 						CreatedEntities[ EntID ]:GetPhysicsObject():EnableMotion(false)
 					end
 					CreatedEntities[ EntID ]:SetNotSolid(true)
-					
+
 					--do the effect
 					if (DoPasteFX) and (math.random(5) > 3) then
 						TingerFX( Shooting_Ent, CreatedEntities[ EntID ]:GetPos() )
 					end
-					
+
 				else
 					Msg("AdvDupeERROR:Created Entity Bad! Class: "..(EntTable.Class or "NIL").." Ent: "..EntID.."\n")
 					CreatedEntities[ EntID ] = nil
 				end--]]
-				
-				
+
+
 				CreatedEntities[ EntID ] = AdvDupe.PasteEntity( Player, EntTable, EntID, Offset, HoldAngle )
-				
+
 				if ( CreatedEntities[ EntID ] ) then
 					--freeze it and make it not solid so it can't be altered while the rest is made
 					--AdvDupe.FreezeEntity( Player, CreatedEntities[ EntID ], false )
@@ -2212,88 +2212,88 @@ function AdvDupe.OverTimePasteProcess( Player, EntityList, ConstraintList, HeadE
 						--CreatedEntities[ EntID ]:GetPhysicsObject():Sleep()
 						CreatedEntities[ EntID ]:GetPhysicsObject():EnableMotion(false)
 					end
-					
+
 					CreatedEntities[ EntID ]:SetNotSolid(true)
-					
+
 					CreatedEntities[ EntID ]:SetParent( Shooting_Ent )
-					
+
 					--do the effect
 					if (DoPasteFX) and (math.random(5) > 3) then
 						TingerFX( Shooting_Ent, CreatedEntities[ EntID ]:GetPos() )
 					end
 				end
-				
-				
+
+
 				LastID = LastID + 1
-				
+
 			else
 				LastID = 1
 				Stage = 2
 				break
 			end
 		end
-		
+
 	elseif Stage == 2 then
-		
-		--for EntID, Ent in pairs( CreatedEntities ) do	
+
+		--for EntID, Ent in pairs( CreatedEntities ) do
 		for i = 1,PostEntityPastePerTick do
 			if EntIDList[ LastID ] then
-				
+
 				local EntID		= EntIDList[ LastID ]
 				local Ent		= CreatedEntities[ EntID ]
-				
+
 				if (Ent != nil) then
 					local NoFail, Result = xpcall( AdvDupe.AfterPasteApply, debug.traceback, Player, Ent, CreatedEntities )
 					if ( !NoFail ) then
 						MsgN("AdvDupeERROR: AfterPasteApply, Error: ",tostring(Result))
 					end
 				end
-				
+
 				LastID = LastID + 1
-				
+
 			else
 				LastID = 1
 				Stage = 3
 				break
 			end
 		end
-		
+
 	elseif Stage == 3 then
-		
+
 		if ( PastewoConst ) then
 			TimedPasteData[DataNum].Stage  = 4
 			return
 		end
-		
+
 		if (DoPasteFX) then Shooting_Ent:EmitSound( "Airboat.FireGunRevDown" ) end
-		
+
 		for i = 1,PasteConstsPerTick do
 			if ( ConstraintList and ConstraintList[ LastID ] ) then
-				
+
 				local Constraint = ConstraintList[ LastID ]
 				if ( Constraint.Type and Constraint.Type != "" ) then
-					
+
 					local Entity = AdvDupe.CreateConstraintFromTable( Player, Constraint, CreatedEntities, Offset, HoldAngle )
-					
+
 					if IsValid( Entity ) then
 						table.insert( CreatedConstraints, Entity )
-						
+
 						if (DoPasteFX) and (math.random(5) > 3) then
 							TingerFX( Shooting_Ent, CreatedEntities[ Constraint.Entity[1].Index ]:GetPos() )
 						end
-						
+
 					else
 						MsgN("AdvDupeERROR:Created Constraint Bad! Type= ",(Constraint.Type or "NIL"))
 						Entity = nil
 					end
 				end
-				
+
 				LastID = LastID + 1
-				
+
 			else
 				LastID = 1
 				Stage = 4
-				
+
 				--[=[for EntID, Ent in pairs( CreatedEntities ) do
 					Ent:SetNotSolid(false)
 					--[[if ( Ent:GetPhysicsObject():IsValid() ) then
@@ -2301,24 +2301,24 @@ function AdvDupe.OverTimePasteProcess( Player, EntityList, ConstraintList, HeadE
 						Phys:Wake()
 					end--]]
 				end--]=]
-				
+
 				break
 			end
 		end
-		
+
 	elseif Stage == 4 then
-		
+
 		CreatedEntities.EntityList = nil
 		local desc = AdvDupe.GetUndoDescription(Player)
 		undo.Create( desc )
 			undo.SetCustomUndoText( "Undone "..desc )
 			for EntID, Ent in pairs( CreatedEntities ) do
 				if IsValid(Ent) then
-					
+
 					undo.AddEntity( Ent )
-					
+
 					EntTable = EntityList[ EntID ]
-					
+
 					--if ( Ent:GetPhysicsObject():IsValid() ) then
 						--[=[local Phys = Ent:GetPhysicsObject()
 						if ( PasteFrozen or PastewoConst ) or ( EntTable.PhysicsObjects[0].Frozen ) then
@@ -2332,14 +2332,14 @@ function AdvDupe.OverTimePasteProcess( Player, EntityList, ConstraintList, HeadE
 							Phys:EnableMotion(true)
 							Phys:Wake()
 						end--]=]
-							
+
 					--end
-					
+
 					Ent:SetNotSolid(false)
-					
+
 					// Note: As of February 2016 Gmod Hotfix #2, SetParent'ing a frozen prop will unfreeze it (though it stays asleep), so we have to refreeze it
 					Ent:SetParent()
-					
+
 					for Bone = 0, Ent:GetPhysicsObjectCount() do
 						local Phys = Ent:GetPhysicsObjectNum( Bone )
 						if IsValid( Phys ) then
@@ -2353,20 +2353,20 @@ function AdvDupe.OverTimePasteProcess( Player, EntityList, ConstraintList, HeadE
 							end
 						end
 					end
-					
+
 					--[[local Phys = Ent:GetPhysicsObject()
 					if ( Phys and Phys:IsValid() ) then
 						Phys:Wake()
 					end--]]
-					
+
 					if ( Ent.RDbeamlibDrawer ) then
 						Ent.RDbeamlibDrawer:SetParent( Ent )
 					end
-					
+
 					if ( !PastewoConst ) then
 						AdvDupe.ApplyParenting( Ent, EntID, EntityList, CreatedEntities )
 					end
-					
+
 					-- Resets the positions of all the entities in the table
 					EntTable.Pos = EntTable.LocalPos * 1
 					EntTable.Angle = EntTable.LocalAngle * 1
@@ -2376,30 +2376,30 @@ function AdvDupe.OverTimePasteProcess( Player, EntityList, ConstraintList, HeadE
 							Object.Angle = Object.LocalAngle * 1
 						end
 					end
-					
+
 				else
 					Ent = nil
 				end
 			end
 			undo.SetPlayer( Player )
 		undo.Finish()
-		
+
 		--[[for EntID, Ent in pairs( CreatedEntities ) do
 			AdvDupe.ApplyParenting( Ent, EntID, EntityList, CreatedEntities )
 		end--]]
-		
+
 		--AdvDupe.ResetPositions( EntityList, ConstraintList )
-		
+
 		Stage = 5 --done!
-		
+
 	end
-	
+
 	TimedPasteData[DataNum].Stage  = Stage
-	
+
 	if Stage < 5 then
 		TimedPasteData[DataNum].LastID = LastID
 	end
-	
+
 end
 
 
@@ -2410,26 +2410,26 @@ function AdvDupe.FinishPasting( TimedPasteData,TimedPasteDataCurrent )
 	-- This hook is for E2's dupefinished function
 	-- Use TimedPasteData[TimedPasteDataCurrent].Player to get the player
 	hook.Run("AdvDupe_FinishPasting", TimedPasteData, TimedPasteDataCurrent)
-	
+
 	if ( !TimedPasteData[TimedPasteDataCurrent].DontRemoveThinger ) then
 		if IsValid( TimedPasteData[TimedPasteDataCurrent].Shooting_Ent.Entity ) then
 			TimedPasteData[TimedPasteDataCurrent].Shooting_Ent.Entity:Remove()
 		end
 		AdvDupe.HideGhost( TimedPasteData[TimedPasteDataCurrent].Player, false ) --unhide ghost now
 		AdvDupe.SetPasting( TimedPasteData[TimedPasteDataCurrent].Player, false ) --allow the player to paste again
-		
+
 		AdvDupe.SetPercent(TimedPasteData[TimedPasteDataCurrent].Player, 100)
 		AdvDupe.SetPercent(TimedPasteData[TimedPasteDataCurrent].Player, -1)
 	end
-	
+
 	if ( TimedPasteData[TimedPasteDataCurrent].CallOnPasteFin ) then
 		TimedPasteData[TimedPasteDataCurrent].CallOnPasteFin(
 			TimedPasteData[TimedPasteDataCurrent].Shooting_Ent,
-			TimedPasteData[TimedPasteDataCurrent].CreatedEntities, 
+			TimedPasteData[TimedPasteDataCurrent].CreatedEntities,
 			TimedPasteData[TimedPasteDataCurrent].CreatedConstraints
 		)
 	end
-	
+
 	table.remove(TimedPasteData,TimedPasteDataCurrent)
 end
 
@@ -2439,51 +2439,51 @@ end
 --	Makes single entity
 --
 function AdvDupe.PasteEntity( Player, EntTable, EntID, Offset, HoldAngle )
-	
+
 	if ( not AdvDupe.CheckOkEnt( Player, EntTable ) ) then
 		return
 	end
-	
+
 	local Ent = AdvDupe.CreateEntityFromTable( Player, EntTable, EntID, Offset, HoldAngle )
-	
+
 	if IsValid( Ent ) then
-		
+
 		Player:AddCleanup( "duplicates", Ent )
 
 		if Ent.OnDuplicated then Ent:OnDuplicated(EntTable) end
-		
+
 		Ent.BoneMods = table.Copy( EntTable.BoneMods )
 		Ent.EntityMods = table.Copy( EntTable.EntityMods )
 		Ent.PhysicsObjects = table.Copy( EntTable.PhysicsObjects )
-		
+
 		local Success, Result = xpcall( duplicator.ApplyEntityModifiers, debug.traceback, Player, Ent )
 		if ( !Success ) then
 			MsgN("AdvDupeERROR: ApplyEntityModifiers, Error: ",tostring(Result))
 		end
-		
+
 		local Success, Result = xpcall( duplicator.ApplyBoneModifiers, debug.traceback, Player, Ent )
 		if ( !Success ) then
 			MsgN("AdvDupeERROR: ApplyBoneModifiers Error: ",tostring(Result))
 		end
-		
+
 		if ( EntTable.Skin ) then Ent:SetSkin( EntTable.Skin ) end
 		if ( Ent.RestoreNetworkVars ) then Ent:RestoreNetworkVars( EntTable.DT ) end
-		
+
 		if Ent:GetClass() == "prop_vehicle_prisoner_pod" and Ent:GetModel() != "models/vehicles/prisoner_pod_inner.mdl" and !Ent.HandleAnimation then
 			local function FixChair( vehicle, Player )
 				return Player:SelectWeightedSequence( ACT_GMOD_SIT_ROLLERCOASTER )
 			end
 			table.Merge( Ent, { HandleAnimation = FixChair } )
 		end
-		
+
 		return Ent
-		
+
 	else
-		
+
 		MsgN("AdvDupeERROR:Created Entity Bad! Class: ",(EntTable.Class or "NIL")," Ent: ",EntID)
-		
+
 	end
-	
+
 end
 
 
@@ -2492,27 +2492,27 @@ end
 --
 function AdvDupe.GenericDuplicatorFunction( Player, data, ID )
 	if (!data) or (!data.Class) then return false end
-	
+
 	--Msg("AdvDupeInfo: Generic make function for Class: "..data.Class.." Ent: ".."\n")
-	
+
 	local Entity = NULL
 	if ( data.Class != "lua_run" and data.Class:Left( 5 ) != "base_" and scripted_ents.GetList()[data.Class] ) then
 		Entity = ents.Create( data.Class )
 	end
-	
+
 	if (!Entity:IsValid()) then
 		MsgN("AdvDupeError: Unknown class \"",data.Class,"\", making prop instead for ent: ",ID)
 		Entity = ents.Create( "prop_physics" )
 		Entity:SetCollisionGroup( COLLISION_GROUP_WORLD )
 	end
-	
+
 	duplicator.DoGeneric( Entity, data )
 	Entity:Spawn()
 	Entity:Activate()
 	duplicator.DoGenericPhysics( Entity, Player, data )
 
 	table.Add( Entity:GetTable(), data )
-	
+
 	return Entity
 end
 
@@ -2529,10 +2529,10 @@ local KeyLookup = {
 }
 
 function AdvDupe.CreateEntityFromTable( Player, EntTable, ID, Offset, HoldAngle )
-	
+
 	local EntityClass = duplicator.FindEntityClass( EntTable.Class )
-	
-	
+
+
 	local NewPos, NewAngle = LocalToWorld( EntTable.LocalPos, EntTable.LocalAngle, Offset, HoldAngle )
 	EntTable.Pos = NewPos
 	EntTable.Angles = NewAngle
@@ -2545,49 +2545,49 @@ function AdvDupe.CreateEntityFromTable( Player, EntTable, ID, Offset, HoldAngle 
 			Object.Angle = NewAngle
 		end
 	end
-	
+
 	-- This class is unregistered. Instead of failing try using a generic
 	-- Duplication function to make a new copy..
 	if (!EntityClass) then
 		return AdvDupe.GenericDuplicatorFunction( Player, EntTable, ID )
 	end
-	
+
 	-- Build the argument list
 	-- if (!EntTable.arglist) then
 		local arglist = {}
-		
+
 		for index, Key in ipairs( EntityClass.Args ) do
-			
+
 			-- Translate keys from old system
 			local Arg = EntTable[ KeyLookup[Key] or Key ]
-			
+
 			-- Special keys
 			if ( Key == "Data" ) then Arg = EntTable end
-			
+
 			arglist[ index ] = Arg or false -- If there's a missing argument, replace it by false, because unpack would stop on nil
-			
+
 		end
 		EntTable.arglist = arglist
 	-- Removed this else branch because it broke entities that had changed their duplicator.RegisterEntityClass call
 	--[[else
 		local fpos, fang = false, false --found ang and pos
 		for iNumber, Key in pairs( EntityClass.Args ) do
-			
+
 			if ( Key == "pos" || Key == "position" || Key == "Pos") then
 				EntTable.arglist[ iNumber ] = EntTable.Pos
 				fpos = true
 			end
-			
+
 			if ( Key == "ang" || Key == "Ang" || Key == "angle" || Key == "Angle" ) then
 				EntTable.arglist[ iNumber ] = EntTable.Angle
 				fang = true
 			end
-			
+
 			if (fpos and fang) then break end
-			
+
 		end
 	end--]]
-	
+
 	-- Create and return the entity
 	--return EntityClass.Func( Player, unpack(EntTable.arglist) )
 	local ok, Result
@@ -2609,7 +2609,7 @@ function AdvDupe.CreateEntityFromTable( Player, EntTable, ID, Offset, HoldAngle 
 	else
 		return Result
 	end
-	
+
 end
 
 --
@@ -2620,21 +2620,21 @@ function AdvDupe.CreateConstraintFromTable( Player, Constraint, EntityList, Offs
 
 	local Factory = duplicator.ConstraintType[ Constraint.Type ]
 	if ( !Factory ) then return end
-	
+
 	local Args = {}
 	for k, Key in pairs( Factory.Args ) do
-		
+
 		local Val = Constraint[ Key ]
-		
+
 		if ( Key == "pl" ) then Val = Player end
-		
-		for i=1, 6 do 
+
+		for i=1, 6 do
 			if ( Constraint.Entity[ i ] ) then
-				if ( Key == "Ent"..i ) or ( Key == "Ent" ) then						
+				if ( Key == "Ent"..i ) or ( Key == "Ent" ) then
 					if ( Constraint.Entity[ i ].World ) then
 						Val = game.GetWorld()
 					else
-						Val = EntityList[ Constraint.Entity[ i ].Index ] 
+						Val = EntityList[ Constraint.Entity[ i ].Index ]
 						if (!Val) or (!Val:IsValid()) then
 							MsgN("AdvDupeERROR: Problem with = ",(Constraint.Type or "NIL")," Constraint. Could not find Ent: ",Constraint.Entity[ i ].Index)
 							return
@@ -2654,44 +2654,44 @@ function AdvDupe.CreateConstraintFromTable( Player, Constraint, EntityList, Offs
 				if ( Key == "Length"..i ) then Val = Constraint.Entity[ i ].Length end
 			end
 		end
-		
+
 		-- If there's a missing argument then unpack will stop sending at that argument
 		if ( Val == nil ) then Val = false end
-		
+
 		table.insert( Args, Val )
-		
+
 	end
-	
+
 	--local Entity = Factory.Func( unpack(Args) )
 	--return Entity
-	
-	
-	
+
+
+
 	if ( DebugWeldsByDrawingThem) and ( Constraint.Type == "Weld" ) then
 		RDbeamlib.MakeSimpleBeam(
-			EntityList[ Constraint.Entity[ 1 ].Index ], Vector(0,0,0), 
-			EntityList[ Constraint.Entity[ 2 ].Index ], Vector(0,0,0), 
+			EntityList[ Constraint.Entity[ 1 ].Index ], Vector(0,0,0),
+			EntityList[ Constraint.Entity[ 2 ].Index ], Vector(0,0,0),
 			"cable/cable2", Color(255,0,0,255), 1, true
 		)
 	end
-	
-	
-	
+
+
+
 	local ok, Result = xpcall( Factory.Func, debug.traceback, unpack(Args) )
 	if ( !ok ) then
 		MsgN("AdvDupeERROR: CreateConstraint failed to make \"",(Constraint.Type or "NIL"),"\", Error: ",tostring(Result))
 		AdvDupe.SendClientError( Player, "Failed to make \""..(Constraint.Type or "NIL").."\"" )
 		return
 	else
-		
+
 		if (Constraint.Type == "Elastic" or Constraint.length) and isnumber(Constraint.length) then --fixed?
 			Result:Fire("SetSpringLength", Constraint.length, 0)
 			Result.length = Constraint.length
 		end
-		
+
 		return Result
 	end
-	
+
 end
 
 --
@@ -2706,15 +2706,15 @@ function AdvDupe.MakeProp( Player, Pos, Ang, Model, PhysicsObjects, Data )
 
 	-- Make sure this is allowed
 	if ( !gamemode.Call( "PlayerSpawnProp", Player, Model ) ) then return end
-	
+
 	local Prop = ents.Create( "prop_physics" )
 		duplicator.DoGeneric( Prop, Data )
 	Prop:Spawn()
 	Prop:Activate()
-	
+
 	duplicator.DoGenericPhysics( Prop, Player, Data )
 	duplicator.DoFlex( Prop, Data.Flex, Data.FlexScale )
-	
+
 --	if ( Data && !Data.SkipSolidCheck ) then
 --		timer.Simple( 0.01, CheckPropSolid, Prop, COLLISION_GROUP_NONE, COLLISION_GROUP_WORLD )
 --	end
@@ -2722,26 +2722,26 @@ function AdvDupe.MakeProp( Player, Pos, Ang, Model, PhysicsObjects, Data )
 	-- Tell the gamemode we just spawned something
 	gamemode.Call( "PlayerSpawnedProp", Player, Model, Prop )
 	--DoPropSpawnedEffect( Prop ) --fuck no
-	
+
 	return Prop
-	
+
 end
 
 --
 --	Apply after paste stuff
 --
 function AdvDupe.AfterPasteApply( Player, Ent, CreatedEntities )
-	
+
 	if ( Ent.PostEntityPaste ) then
 		Ent:PostEntityPaste( Player, Ent, CreatedEntities )
 	end
-	
+
 	--clean up
 	if (Ent.EntityMods) then
-		if (Ent.EntityMods.RDDupeInfo) then -- fix: RDDupeInfo leak 
+		if (Ent.EntityMods.RDDupeInfo) then -- fix: RDDupeInfo leak
 			Ent.EntityMods.RDDupeInfo = nil
 		end
-		if (Ent.EntityMods.WireDupeInfo) then 
+		if (Ent.EntityMods.WireDupeInfo) then
 			Ent.EntityMods.WireDupeInfo = nil
 		end
 	end
@@ -2760,7 +2760,7 @@ function AdvDupe.ApplyParenting( Ent, EntID, EntityList, CreatedEntities )
 			Ent:SetParent( Ent2 )
 		end
 	end
-	
+
 end
 
 function AdvDupe.FreezeEntity( ply, Ent, AddToFrozenList )
@@ -2781,13 +2781,13 @@ local function GetCaselessEntTable(class)
 	local lclass = lower(class)
 	local tbl = tablecache[lclass]
 	if tbl then return tbl end
-	
+
 	tbl = scripted_ents.GetStored(class) or scripted_ents.GetStored(lclass)
 	if tbl then
 		tablecache[lclass] = tbl
 		return tbl
 	end
-	
+
 	for thisclass,tbl in pairs(scripted_ents.GetList()) do
 		if lower(thisclass) == lclass then
 			tablecache[lclass] = tbl
@@ -2818,9 +2818,9 @@ end
 --	Ent make check hooks
 --
 --	Add a hook to check if player should be allowed to make the ent. return true to allow ent creation, false to deny
--- 	Example hook:	
---	AdvDupe.AddEntCheckHook( "TestHook", 
---		function(Player, Ent, EntTable) return true end, 
+-- 	Example hook:
+--	AdvDupe.AddEntCheckHook( "TestHook",
+--		function(Player, Ent, EntTable) return true end,
 --		function(HookName) Msg("my advdupe ent check hook \""..HookName.."\" died and was removed\n") end )
 --
 local CheckFunctions = {}
@@ -2832,15 +2832,15 @@ function AdvDupe.CheckOkEnt( Player, EntTable )
 
 	--MsgN("EntCheck on Class: ",EntTable.Class)
 	for HookName, TheHook in pairs (CheckFunctions) do
-		
+
 		local Success, Result = xpcall( TheHook.Func, debug.traceback, Player, EntTable.Class, EntTable )
 		if ( !Success ) then
 			ErrorNoHalt("AdvDupeERROR: Entity check hook \"",HookName,"\" failed, removing.\nHook Error: \"",tostring(Result),"\"\n")
-			
+
 			local OnFailCallBack = TheHook.OnFailCallBack
-			
+
 			CheckFunctions[ HookName ] = nil
-			
+
 			if ( OnFailCallBack ) then
 				--MsgN("OnFailCallBack")
 				local Success, Result = xpcall( OnFailCallBack, debug.traceback, HookName )
@@ -2848,22 +2848,22 @@ function AdvDupe.CheckOkEnt( Player, EntTable )
 					ErrorNoHalt("AdvDupeERROR: WTF! \"",HookName,"\" OnFailCallBack failed too! Tell who ever make that hook that they're doing it wrong. Error: \"",tostring(Result),"\"\n")
 				end
 			end
-			
+
 		elseif ( Result == false ) then
-			
+
 			return false
-			
+
 		end
-		
+
 	end
-	
+
 	local EntityClass = duplicator.FindEntityClass( EntTable.Class )
 	if not IsAllowed(Player, EntTable.Class, EntityClass) then
 		AdvDupe.SendClientError(Player, "Sorry, you can't cheat like that")
 		MsgN("AdvDupeERROR: ",tostring(Player)," tried to paste admin only prop ",(EntTable.Class or "NIL")," : ",EntID)
 		return false
 	end
-	
+
 	--[[local test = GetCaselessEntTable( EntTable.Class )
 	if ( Player:IsAdmin( ) or Player:IsSuperAdmin() or game.SinglePlayer() or !DontAllowPlayersAdminOnlyEnts ) then
 		return true
@@ -2875,7 +2875,7 @@ function AdvDupe.CheckOkEnt( Player, EntTable )
 		return true
 		--return false
 	end]]
-	
+
 	return true
 end
 
@@ -2913,12 +2913,12 @@ if (!game.SinglePlayer()) then
 	local function AddNoItems()
 		AdvDupe.AdminSettings.AddEntCheckHook("AdvDupe_NoItems", NoItems, AddNoItems)
 	end
-	
+
 	local b_NoItems = CreateConVar( "AdvDupe_NoItems", 1, {FCVAR_ARCHIVE} )
 	if b_NoItems:GetBool() then
 		AddNoItems()
 	end
-	
+
 	--this doesn't work yet, cvars.AddChangeCallback is bugged
 	local function OnChange( name, oldvalue, newvalue )
 		MsgN("changed: ",name)
@@ -2927,11 +2927,11 @@ if (!game.SinglePlayer()) then
 		else
 			AdvDupe.AdminSettings.RemoveEntCheckHook("AdvDupe_NoItems")
 		end
-		
+
 	end
 	cvars.AddChangeCallback( "AdvDupe_NoItems", OnChange )
-	
-	
+
+
 	local function DisallowedClassesCheck(Player, ClassName, EntTable)
 		if DisallowedClasses[ClassName] then
 			if (DisallowedClasses[ClassName] == 2) then return false
@@ -2948,7 +2948,7 @@ if (!game.SinglePlayer()) then
 	end
 	AddDisallowedClassesCheck()
 end
-	
+
 local function ModelCheck(Player, ClassName, EntTable)
 	if EntTable.Model then
 		if string.find(EntTable.Model, "^%*%d+") then --crash fix for brushes :/
@@ -2974,29 +2974,29 @@ AddModelCheck()
 --
 -- Paste duplicated ents
 function AdvDupe.OldPaste( ply, Ents, Constraints, DupeInfo, DORInfo, HeadEntityID, offset )
-	
+
 	local constIDtable, entIDtable, CreatedConstraints, CreatedEnts = {}, {}, {}, {}
 	local HeadEntity = nil
-	
-	
+
+
 	--Msg("\n=================--DoingLegacyPaste--=================\n")
-	
+
 	if (!Ents) then return false end
-	
-	
+
+
 	for entID, EntTable in pairs( Ents ) do
-		
+
 		local Ent = nil
-		
+
 		local EntClass = EntTable.Class
 		local EntType = duplicator.EntityClasses[EntClass]
-		
-		
+
+
 		-- Check the antities class is registered with the duplicator
 		if EntClass and EntType then
-			
+
 			local Args = AdvDupe.PasteGetEntArgs( ply, EntTable, offset )
-			
+
 			-- make the Entity
 			if EntClass == "prop_physics" then --cause new prop swaner uses different args
 				Ent = AdvDupe.OldMakeProp( ply, unpack(Args) )
@@ -3005,74 +3005,74 @@ function AdvDupe.OldPaste( ply, Ents, Constraints, DupeInfo, DORInfo, HeadEntity
 			else
 				Ent = EntType.Func( ply, unpack(Args) )
 			end
-			
+
 		elseif (EntClass) then
 			MsgN("Duplicator paste: Unknown ent class " , (EntClass or "NIL") )
 		end
-		
+
 		if IsValid(Ent) then
 			entIDtable[entID] = Ent
 			table.insert(CreatedEnts,Ent)
 			table.Add( Ent:GetTable(), EntTable )
-			
+
 			AdvDupe.PasteApplyEntMods( ply, Ent, EntTable )
 		end
-		
+
 		if ( entID == HeadEntityID ) then
 			HeadEntity = Ent
 		end
-		
+
 	end
-	
-	
-	
+
+
+
 	for _, Constraint in pairs(Constraints) do
-		
+
 		local ConstraintType = duplicator.ConstraintType[Constraint.Type]
-		
+
 		-- Check If the constraint type has been registered with the duplicator
 		if Constraint.Type and ConstraintType then
-			
+
 			local Args, DoConstraint = AdvDupe.PasteGetConstraintArgs( ply, Constraint, entIDtable, offset )
-			
+
 			-- make the constraint
 			if DoConstraint then
 				local const = ConstraintType.Func(unpack(Args))
 				table.insert(CreatedConstraints,const)
-				
+
 				--[[if (Constraint.ConstID) then
 					constIDtable[Constraint.ConstID] = const
 					Msg("Dupe add constraint ID: " .. Constraint.ConstID .. "\n")
 				end--]]
 			end
-			
+
 		elseif (Constraint.Type) then
 			MsgN("Duplicator paste: Unknown constraint " , (Constraint.Type or "NIL") )
 		end
 	end
-	
+
 	AdvDupe.PasteApplyDupeInfo( ply, DupeInfo, entIDtable )
-	
+
 	AdvDupe.PasteApplyDORInfo( DORInfo, function(id) return entIDtable[id] end )
-	
-	
+
+
 	--[[for entid, motordata in pairs(Wheels) do
 		local ent = entIDtable[entid]
 		ent:GetTable():SetMotor( constIDtable[motordata.motor] )
 		ent:GetTable():SetToggle( motordata.toggle )
 	end--]]
-	
-	
+
+
 	--AdvDupe.PasteRotate( ply, HeadEntity, CreatedEnts ) --remember to turn ghost rotation back on too
-	
+
 	return CreatedEnts, CreatedConstraints
 end
 
 function AdvDupe.PasteGetEntArgs( ply, EntTable, offset )
-	
+
 	local EntArgs, Args, BoneArgs, nBone = {}, {}, nil, nil
-	
-	
+
+
 	--these classes use different args than what new commands takes
 	if EntTable.Class == "prop_physics"  then
 		EntArgs = {"Pos", "Ang", "Model", "Vel", "aVel", "frozen"}
@@ -3081,64 +3081,64 @@ function AdvDupe.PasteGetEntArgs( ply, EntTable, offset )
 	else
 		EntArgs = duplicator.EntityClasses[EntTable.Class].Args
 	end
-	
+
 	for n,Key in pairs(EntArgs) do
-		
+
 		if istable(Key) then
 			BoneArgs = Key
 			nBone	 = n
 		else
 			local Arg = EntTable[Key]
-			
+
 			key = string.lower(Key)
-			
+
 			if		key == "ang"	or key == "angle"			then Arg = Arg or Vector(0,0,0)
 			elseif	key == "pos"	or key == "position"		then Arg = Arg + offset or Vector(0,0,0)
 			elseif	key == "vel"	or key == "velocity"		then Arg = Arg or Vector(0,0,0)
 			elseif	key == "avel"	or key == "anglevelocity"	then Arg = Arg or Vector(0,0,0)
-			elseif	key == "pl" 	or key == "ply"				then Arg = ply 
+			elseif	key == "pl" 	or key == "ply"				then Arg = ply
 			-- TODO:  Arg = ply.GetBySteamID(Arg)
 			end
-			
+
 			Args[n] = Arg
 		end
 	end
-	
+
 	if EntTable.Bones and BoneArgs then
-		
+
 		local Arg = {}
-					
+
 		-- Get args for each bone
 		for Bone,Args in pairs(EntTable.Bones) do
 			Arg[Bone] = {}
-			
+
 			for n, bKey in pairs( BoneArgs ) do
-				
+
 				local bArg = EntTable.Bones[Bone][bKey] or tostring(0)
-				
+
 				-- Do special cases
 				local bkey = string.lower(bKey)
-				
+
 				if	bkey == "ang"	or bkey == "angle"				then bArg = bArg or Vector(0,0,0)
 				elseif	bkey == "pos"	or bkey == "position"		then bArg = bArg + offset or Vector(0,0,0)
 				elseif	bkey == "vel"	or bkey == "velocity"		then bArg = bArg or Vector(0,0,0)
 				elseif	bkey == "avel"	or bkey == "angvelocity"	then bArg = bArg or Vector(0,0,0)
 				end
-				
+
 				Arg[Bone][n] = bArg
 			end
 		end
-		
+
 		Args[nBone] = Arg
 	end
-	
+
 	return Args
-	
+
 end
 
 -- Legacy prop physics function
 function AdvDupe.OldMakeProp( ply, Pos, Ang, Model, Vel, aVel, frozen )
-	
+
 	-- check we're allowed to spawn
 	if ( !ply:CheckLimit( "props" ) ) then return end
 	local Ent = ents.Create( "prop_physics" )
@@ -3146,7 +3146,7 @@ function AdvDupe.OldMakeProp( ply, Pos, Ang, Model, Vel, aVel, frozen )
 		Ent:SetAngles( Ang )
 		Ent:SetPos( Pos )
 	Ent:Spawn()
-	
+
 	-- apply velocity If required
 	if IsValid( Ent:GetPhysicsObject() ) then
 		Phys = Ent:GetPhysicsObject()
@@ -3155,15 +3155,15 @@ function AdvDupe.OldMakeProp( ply, Pos, Ang, Model, Vel, aVel, frozen )
 		Phys:EnableMotion(frozen != true)
 	end
 	Ent:Activate()
-	
+
 	-- tell the gamemode we just spawned something
 	ply:AddCount( "props", Ent )
-	
+
 	local ed = EffectData()
 		ed:SetEntity( Ent )
 	util.Effect( "propspawn", ed )
-	
-	return Ent	
+
+	return Ent
 end
 
 -- Legacy prop phyics function
@@ -3173,56 +3173,56 @@ function AdvDupe.OldMakeWheel( ply, Pos, Ang, Model, Vel, aVel, frozen, key_f, k
 
 	local wheel = ents.Create( "gmod_wheel" )
 	if ( !wheel:IsValid() ) then return end
-	
+
 	wheel:SetModel(Model )
 	wheel:SetPos( Pos )
 	wheel:SetAngles( Ang )
 	wheel:Spawn()
-	
+
 	wheel:GetTable():SetPlayer( ply )
 
 	if ( wheel:GetPhysicsObject():IsValid() ) then
-	
+
 		Phys = wheel:GetPhysicsObject()
 		if Vel then Phys:SetVelocity(Vel) end
 		if aVel then Phys:AddAngleVelocity(aVel) end
 		Phys:EnableMotion(frozen != true)
-		
+
 	end
 
 	wheel:GetTable().model = model
 	wheel:GetTable().key_f = key_f
 	wheel:GetTable().key_r = key_r
-	
+
 	wheel:GetTable().KeyBinds = {}
-	
+
 	-- Bind to keypad
 	wheel:GetTable().KeyBinds[1] = numpad.OnDown( 	ply, 	key_f, 	"WheelForward", 	wheel, 	true )
 	wheel:GetTable().KeyBinds[2] = numpad.OnUp( 	ply, 	key_f, 	"WheelForward", 	wheel, 	false )
 	wheel:GetTable().KeyBinds[3] = numpad.OnDown( 	ply, 	key_r, 	"WheelReverse", 	wheel, 	true )
 	wheel:GetTable().KeyBinds[4] = numpad.OnUp( 	ply, 	key_r, 	"WheelReverse", 	wheel, 	false )
-	
+
 	ply:AddCount( "wheels", wheel )
-	
+
 	return wheel
-	
+
 end
 
 function AdvDupe.PasteApplyEntMods( ply, Ent, EntTable )
-	
+
 	for ModifierType, Modifier in pairs(AdvDupe.OldEntityModifiers) do
 		if EntTable[ModifierType] then
 			--MsgN("Applying Mod Type: ",ModifierType)
 			local args = {}
-			
+
 			for n,arg in pairs(Modifier.Args) do
 				args[n] = EntTable[ModifierType][arg]
 			end
-			
+
 			Modifier.Func( ply, Ent, unpack(args))
 		end
 	end
-	
+
 	--Apply PhysProp data
 	if EntTable.Bones then
 		for BoneID,Args in pairs(EntTable.Bones) do
@@ -3236,7 +3236,7 @@ function AdvDupe.PasteApplyEntMods( ply, Ent, EntTable )
 			end
 		end
 	end
-	
+
 end
 
 --legacy EntityModifiers for color and material
@@ -3251,7 +3251,7 @@ function AdvDupe.OldEntityModifiers.colour.Func( ply, Entity, r,g,b,a, mode, fx 
 	Entity:SetColor( Color(r,g,b,a) )
 	Entity:SetRenderMode(mode)
 	Entity:SetKeyValue("renderfx", fx)
-	
+
 	local Data = {}
 	Data.Color = Color(r,g,b,a)
 	//Data.Color.r, Data.Color.g, Data.Color.b, Data.Color.a = r,g,b,a
@@ -3270,30 +3270,30 @@ function AdvDupe.OldEntityModifiers.material.Func( ply, Entity, mat )
 	Entity:SetMaterial( mat )
 	--Entity:GetTable().material = {mat = mat}
 	Entity.MaterialOverride = mat
-	
+
 	return true
 
 end
 
 --the data table uses the old names instead
 function AdvDupe.OldSetPhysProp( ply, ent, BoneID, Bone, Data )
-		
+
 		if ( !Bone ) then
 			Bone = Entity:GetPhysicsObjectNum( BoneID )
-			if ( !Bone || !Bone:IsValid() ) then 
+			if ( !Bone || !Bone:IsValid() ) then
 				Msg("SetPhysProp: Error applying attributes to invalid physics object!\n")
 				return
 			end
 		end
-		
-		
+
+
 		-- Set the physics properties on the bone
 		Data2 = {}
 		if (Data.gravityb!= nil )	then
 			PhysBone:EnableGravity( gravityb )
 			Data2.GravityToggle = gravityb
 		end
-		if (Data.material!= nil)		then 
+		if (Data.material!= nil)		then
 			PhysBone:EnableGravity( gravityb )
 			Data2.Material = material
 		end
@@ -3304,18 +3304,18 @@ function AdvDupe.OldSetPhysProp( ply, ent, BoneID, Bone, Data )
 		if (Data.buoyancy!=nil)		then Bone:SetBuoyancyRatio( Data.buoyancy ) end
 		if (Data.rotdamping!=nil)	then Bone:SetDamping( PhysBone:GetSpeedDamping(), Data.rotdamping ) end
 		if (Data.speeddamping!=nil)	then Bone:SetDamping( Data.speeddamping, PhysBone:GetRotDamping() ) end
-		
+
 		-- Add the settings to the bone's table
 		if not ent:GetTable().Bones then ent:GetTable().Bones = {} end
 		if not ent:GetTable().Bones[Bone] then ent:GetTable().Bones[Bone] = {} end
-		
+
 		-- Copy these to the new object
 		for k, v in pairs(Data2) do
 			Entity.PhysicsObjects = Entity.PhysicsObjects or {}
 			Entity.PhysicsObjects[ BoneID ] = Entity.PhysicsObjects[ BoneID ] or {}
-			Entity.PhysicsObjects[ BoneID ][k] = v 
+			Entity.PhysicsObjects[ BoneID ][k] = v
 		end
-		
+
 		-- HACK HACK
 		-- If we don't do this the prop will be motion enabled and will
 		-- slide through the world with no gravity.
@@ -3323,7 +3323,7 @@ function AdvDupe.OldSetPhysProp( ply, ent, BoneID, Bone, Data )
 			Bone:EnableMotion( true )
 			Bone:EnableMotion( false )
 		end
-		
+
 	end
 
 -- Get the args to make the constraints
@@ -3331,38 +3331,38 @@ function AdvDupe.PasteGetConstraintArgs( ply, Constraint, entIDtable, offset )
 	local Args = {}
 	local DoConstraint = true
 	local ConstraintType = duplicator.ConstraintType[Constraint.Type]
-	
+
 	-- Get the args that we need from the ConstraintType table
 	for n,key in pairs(ConstraintType.Args) do
-		
+
 		local Arg = Constraint[key]
 		local len = string.len(key)
-		
+
 		-- DO SPECIAL CASES
 		-- If key represents an entity, convert from an entID back to an ent
 		if	string.find(key, "Ent")		and ( len == 3 or len == 4 ) then
 			Arg = entIDtable[Arg]
 			if !IsValid(Arg) then DoConstraint = nil end
-			
+
 		-- If key represents an Local angle or vector, convert from string, back to a vector
 		elseif	(string.find(key, "LPos")	and ( len == 4 or len == 5 ))
-		or	(string.find(key, "Ang")	and ( len == 3 or len == 4 )) then 
+		or	(string.find(key, "Ang")	and ( len == 3 or len == 4 )) then
 			Arg = Arg or Vector(0,0,0)
-			
+
 		-- If key represents a World Vector or angle, convert from string, back to a vector
 		elseif	(string.find(key, "WPos")	and ( len == 4 or len == 5 )) then
 			Arg = Arg + offset or Vector(0,0,0)
-			
+
 		-- If key represents a ply, convert from steamid back to a ply
 		elseif	key == "pl" or key == "ply" or key == "ply" then
 			--Arg = ply.GetBySteamID(Arg)
 			Arg = ply
 			if not Arg:IsValid() then DoConstraint = nil end
 		end
-		
+
 		Args[n] = Arg
 	end
-	
+
 	return Args, DoConstraint
 end
 
@@ -3379,91 +3379,91 @@ end
 
 -- Apply DORInfo for DeleteOnRemove
 function AdvDupe.PasteApplyDORInfo( DORInfoTable, GetentID )
-	
+
 	for id, DORInfo in pairs(DORInfoTable) do
 		local ent = GetentID(id)
 		if IsValid(ent) and (DORInfo) then
 			--ent:SetDeleteOnRemoveInfo(DORInfo, function(id) return GetentID(id) end)
-			
+
 			for _,entindex in pairs(DORInfo) do
 				local ent2 = GetentID(entindex)
 				if (IsValid(ent2) && ent2:EntIndex() > 0) then
 					-- Add the entity
-					
+
 					ent:DeleteOnRemove(ent2)
 				end
 			end
-			
+
 		end
 	end
-	
+
 end
 
 -- Rotate entities relative to the ply's hold angles
 --[[function AdvDupe.PasteRotate( ply, HeadEntity, CreatedEnts )
-	
+
 	local EntOffsets = {}
-	
+
 	if (HeadEntity) then
-	
+
 		for i, ent in pairs( CreatedEnts ) do
-		
+
 			EntOffsets[ ent ] = {}
-			
-			if ( ent != HeadEntity ) then 
-				
+
+			if ( ent != HeadEntity ) then
+
 				local Pos = ent:GetPos()
 				local Ang = ent:GetAngles()
-				
+
 				EntOffsets[ ent ].Pos = HeadEntity:WorldToLocal( Pos )
 				EntOffsets[ ent ].Ang = Ang - HeadEntity:GetAngles()
-				
+
 			end
-			
+
 			-- And physics objects (for ragdolls)
 			local Bones = {}
 			for Bone=0, ent:GetPhysicsObjectCount()-1 do
-				
+
 				local PhysObject = ent:GetPhysicsObjectNum( Bone )
-				
+
 				if ( PhysObject:IsValid() ) then
-					
+
 					Bones[PhysObject] = {}
 					Bones[PhysObject].Pos = HeadEntity:WorldToLocal( PhysObject:GetPos() )
 					Bones[PhysObject].Ang = PhysObject:GetAngle() - HeadEntity:GetAngles()
-					
+
 				end
-					
+
 			end
-			
+
 			EntOffsets[ ent ].Bones = Bones
-			
+
 		end
-		
+
 		-- Rotate main object
 		local angle = ply:GetAngles()
 		angle.pitch = 0
 		angle.roll 	= 0
-		
+
 		HeadEntity:SetAngles( angle - AdvDupe[ply].HoldAngle )
-		
+
 		for ent, tab in pairs( EntOffsets ) do
-			
+
 			if (HeadEntity != ent) then
 				ent:SetPos( HeadEntity:LocalToWorld( tab.Pos ) )
 				ent:SetAngles( HeadEntity:GetAngles() + tab.Ang )
 			end
-			
+
 			-- Ragdoll Bones
 			for phys, ptab in pairs( tab.Bones ) do
-				
+
 				phys:SetPos( HeadEntity:LocalToWorld( ptab.Pos ) )
 				phys:SetAngle( HeadEntity:GetAngles() + ptab.Ang )
-				
+
 			end
-			
+
 		end
-		
+
 	else
 		Msg("Error! Head Duplicator entity not found!\n")
 	end
@@ -3475,44 +3475,44 @@ end
 
 	local EntTable			= EntTable	  or {}
 	local ConstraintTable	= ConstraintTable or {}
-	
+
 	-- Ignore the world
 	if not ent:IsValid() then return EntTable, ConstraintTable end
-	
+
 	-- Add ent to the list of found ents
 	EntTable[ent:EntIndex()] = ent
-	
+
 	-- If there are no Constraints attached then return
 	if not ent:GetTable().Constraints then return EntTable, ConstraintTable end
-	
+
 	for key, const in pairs( ent:GetTable().Constraints ) do
-		
+
 		-- If the constraint doesn't exist, delete it from the list
 		if ( !const:IsValid() ) then
-			
+
 			ent:GetTable().Constraints[key] = nil
-			
+
 		-- Check that the constraint has not already been added to the constraints table
 		elseif ( !ConstraintTable[const:GetTable()] ) then
-			
+
 			-- Add constraint to the constraints table
 			ConstraintTable[const:GetTable()] = const
-			
+
 			-- Run the Function for any ents attached to this constraint
 			for key,Ent in pairs(const:GetTable()) do
 				local len = string.len(key)
 				if	string.find(key, "Ent")
 				and	( len == 3 or len == 4 )
-				and	Ent:IsValid() 
+				and	Ent:IsValid()
 				and	!EntTable[Ent:EntIndex()] then
-					
+
 					EntTable, ConstraintTable  = duplicator.GetEnts(Ent, EntTable, ConstraintTable)
 				end
 			end
-			
+
 		end
 	end
-	
+
 	return EntTable, ConstraintTable
 end
 --]]
@@ -3525,7 +3525,7 @@ end
 --	fixes key not being saved (Conna)
 local function CamRegister(Player, Pos, Ang, Key, Locked, Toggle, Vel, aVel, Frozen, Nocollide)
 	if (!Key) then return end
-	
+
 	local Camera = ents.Create("gmod_cameraprop")
 	Camera:SetAngles(Ang)
 	Camera:SetPos(Pos)
@@ -3535,16 +3535,16 @@ local function CamRegister(Player, Pos, Ang, Key, Locked, Toggle, Vel, aVel, Fro
 	Camera:SetLocked(Locked)
 	Camera.toggle = Toggle
 	Camera:SetTracking(NULL, Vector(0))
-	
+
 	if (Toggle == 1) then
 		numpad.OnDown(Player, Key, "Camera_Toggle", Camera)
 	else
 		numpad.OnDown(Player, Key, "Camera_On", Camera)
 		numpad.OnUp(Player, Key, "Camera_Off", Camera)
 	end
-	
+
 	if (Nocollide) then Camera:GetPhysicsObject():EnableCollisions(false) end
-	
+
 	-- Merge table
 	local Table = {
 		key			= Key,
@@ -3554,7 +3554,7 @@ local function CamRegister(Player, Pos, Ang, Key, Locked, Toggle, Vel, aVel, Fro
 		nocollide 	= nocollide
 	}
 	table.Merge(Camera:GetTable(), Table)
-	
+
 	-- remove any camera that has the same key defined for this player then add the new one
 	local ID = Player:UniqueID()
 	GAMEMODE.CameraList[ID] = GAMEMODE.CameraList[ID] or {}
@@ -3565,7 +3565,7 @@ local function CamRegister(Player, Pos, Ang, Key, Locked, Toggle, Vel, aVel, Fro
 	end
 	List[Key] = Camera
 	return Camera
-	
+
 end
 duplicator.RegisterEntityClass("gmod_cameraprop", CamRegister, "Pos", "Ang", "key", "locked", "toggle", "Vel", "aVel", "frozen", "nocollide")
 
@@ -3622,7 +3622,7 @@ function AdvDupe.ResetPositions( EntTable, Constraints )
 			end
 		end
 	end
-	
+
 	--[[if (!Constraints) then return end
 	for k, Constraint in pairs( Constraints ) do
 		if ( Constraint.Entity ) then
@@ -3634,7 +3634,7 @@ function AdvDupe.ResetPositions( EntTable, Constraints )
 			end
 		end
 	end--]]
-	
+
 end
 
 -- Converts the positions from world positions to positions local to Offset
@@ -3654,7 +3654,7 @@ function AdvDupe.ConvertPositionsToLocal( EntTable, Constraints, Offset, HoldAng
 			end
 		end
 	end
-	
+
 	-- If the entity is constrained to the world we want to move the points to be
 	-- relative to where we're clicking
 	if (!Constraints) then return end

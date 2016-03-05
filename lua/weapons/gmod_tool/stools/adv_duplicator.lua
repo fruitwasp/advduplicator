@@ -46,38 +46,38 @@ TOOL.Pasting = false
 -- Paste a copy
 --
 function TOOL:LeftClick( trace )
-	
+
 	if CLIENT then	return true	end
 	if self:GetPasting() or not self.Entities then return end
-	
+
 	local Snapping = self:GetOwner():KeyDown(IN_SPEED)
-	
+
 	local angle  = self:GetOwner():GetAngles()
 	angle.pitch = 0
 	angle.roll = 0
-	
+
 	if Snapping then
 		angle.yaw = math.Round( angle.yaw / 45 ) * 45
 	end
 	angle.yaw = angle.yaw + self:GetClientNumber( "angle" )
-	
+
 	local Ents, Constraints = nil,nil
-	
+
 	if self.Legacy then
-		
+
 		--paste using legacy data
 		--Msg("===doing old paste===\n")
 		Ents, Constraints = AdvDupe.OldPaste( self:GetOwner(), self.Entities, self.Constraints, self.DupeInfo, self.DORInfo, self.HeadEntityIdx, trace.HitPos )
-		
+
 	else
-		
+
 		AdvDupe.SetPasting( self:GetOwner(), true )
 		self:HideGhost(true)
 		self:SetPercentText("Pasting")
-		
+
 		local PasteFrozen = ( self:GetClientNumber( "pastefrozen" ) == 1 )
 		local PastewoConst = ( self:GetClientNumber( "pastewoconst" ) == 1 )
-		
+
 		local DupePos, DupeAngle
 		if self:GetClientNumber( "worldOrigin" ) ~= 0 then
 			-- Paste at original location
@@ -98,23 +98,23 @@ function TOOL:LeftClick( trace )
 			DupePos + Vector(0,0,self:GetClientNumber( "height" )), DupeAngle,
 			self.NumOfEnts, self.NumOfConst, PasteFrozen, PastewoConst
 		)
-		
+
 	end
-	
+
 	return true
-	
+
 end
 
 --
 -- Put the stuff in the 'clipboard'
 --
 function TOOL:RightClick( trace )
-	
+
 	if self:GetPasting() then return end
 	--self:SetPercentText("Copying")
-	
+
 	local AddToSelection = self:GetOwner():KeyDown(IN_SPEED) and not self.Legacy and not self.FileLoaded and self.Copied
-	
+
 	if not AddToSelection and not IsValid(trace.Entity) or trace.Entity:IsPlayer() then
 		self:ClearClipBoard()
 		return true
@@ -124,11 +124,11 @@ function TOOL:RightClick( trace )
 	if IsValid(trace.Entity) and trace.Entity.DoNotDuplicate then
 		return false
 	end
-	
+
 	if CLIENT then return true end
-	
+
 	--self:SetPercentText("Copying...")
-	
+
 	local StartPos
 	if AddToSelection then
 		StartPos = self.OrgStartPos
@@ -138,23 +138,23 @@ function TOOL:RightClick( trace )
 		StartPos = trace.HitPos
 		self:ReleaseGhostEntity()
 		self.GhostEntitiesCount = 0
-		
+
 		self.Entities = {}
 		self.Constraints = {}
-		
+
 		-- Get the distance from the floor
 		local tr = {}
 		tr.start = StartPos
 		tr.endpos = StartPos + Vector(0,0,-1024)
 		tr.mask = MASK_NPCSOLID_BRUSHONLY
 		local tr_floor = util.TraceLine( tr )
-		if tr_floor.Hit then 
+		if tr_floor.Hit then
 			StartPos = StartPos  + Vector(0,0,-1) * tr_floor.Fraction * 1024
 		end
 	end
-	
+
 	AdvDupe.Copy( trace.Entity, self.Entities, self.Constraints, StartPos )
-	
+
 	if AddToSelection then
 		if not self.GhostEntities[ self.HeadEntityIdx ] or not self.GhostEntities[ self.HeadEntityIdx ]:IsValid() then
 			self:StartGhostEntities( self.Entities, self.HeadEntityIdx, self.HoldPos, self.HoldAngle )
@@ -168,26 +168,26 @@ function TOOL:RightClick( trace )
 		local angle  = self:GetOwner():GetAngles()
 		angle.pitch = 0
 		angle.roll = 0
-		
+
 		self.HeadEntityIdx	= trace.Entity:EntIndex()
 		self.HoldAngle 		= angle
 		self.HoldPos 		= trace.Entity:WorldToLocal( StartPos )
 		self.StartPos		= StartPos
 		self.Legacy			= false
 		self.OrgStartPos	= StartPos
-		
+
 		self:StartGhostEntities( self.Entities, self.HeadEntityIdx, self.HoldPos, self.HoldAngle )
-		
+
 	end
-	
+
 	local NumOfEnts		= table.Count(self.Entities)	or 0
 	local NumOfConst	= table.Count(self.Constraints)	or 0
 	self.NumOfEnts		= NumOfEnts
 	self.NumOfConst		= NumOfConst
-	
+
 	self.FileLoaded		= false
 	self.Copied			= true
-	
+
 	self.Info				= {}
 	self.Info.Creator		= self:GetOwner():GetName()	or "unknown"
 	self.Info.FilePath		= "unsaved data"
@@ -195,13 +195,13 @@ function TOOL:RightClick( trace )
 	self.Info.FileVersion	= ""
 	self.Info.FileDate		= ""
 	self.Info.FileTime		= ""
-	
+
 	self:UpdateLoadedFileInfo(true)
-	
+
 	--self:SetPercent(100)
-	
+
 	return true
-	
+
 end
 
 
@@ -209,13 +209,13 @@ end
 --make a paster ent
 function TOOL:Reload( trace )
 	if self:GetPasting() then return end
-	
+
 	if not trace.HitPos then return false end
 	if trace.Entity:IsPlayer() then return false end
 	if CLIENT then return true end
-	
+
 	local ply = self:GetOwner()
-	
+
 	if self.Legacy then
 		WireLib.AddNotify(ply, "Paster does not support old saves!", NOTIFY_GENERIC, 7)
 		return false
@@ -224,13 +224,13 @@ function TOOL:Reload( trace )
 		WireLib.AddNotify(ply, "No copied data for Paster!", NOTIFY_GENERIC, 7)
 		return false
 	end
-	
+
 	local paster = trace.Entity -- assume we are aiming at a paster
 	if trace.Entity:IsValid() and trace.Entity:GetClass() == "gmod_adv_dupe_paster" and trace.Entity:GetPlayer() == ply then -- if we are not, create a new paster
 		--TODO: clear previous numpad bindings
 	else
 		paster = ents.Create( "gmod_adv_dupe_paster" )
-	
+
 		if not paster:IsValid() then return false end
 
 		paster:SetPos( trace.HitPos )
@@ -252,7 +252,7 @@ function TOOL:Reload( trace )
 			undo.SetPlayer( ply )
 		undo.Finish()
 	end
-	
+
 	local delay 		= self:GetClientNumber( "delay" )
 	local undo_delay	= self:GetClientNumber( "undo_delay" )
 	local range			= self:GetClientNumber( "range" )
@@ -261,23 +261,23 @@ function TOOL:Reload( trace )
 	local undo_key 		= self:GetClientNumber( "pasterundo_key" )
 	local PasteFrozen = ( self:GetClientNumber( "pastefrozen" ) == 1 )
 	local PastewoConst = ( self:GetClientNumber( "pastewoconst" ) == 1 )
-	
+
 	paster:Setup(
 		table.Copy(self.Entities),
 		table.Copy(self.Constraints),
 		self.HoldAngle, delay, undo_delay, range, show_beam, self.HeadEntityIdx,
 		self.NumOfEnts, self.NumOfConst, PasteFrozen, PastewoConst
 	)
-	
+
 	if key > -1 then numpad.OnDown( ply, key, "PasterCreate", paster, true ) end
 	if undo_key > -1 then numpad.OnDown( ply, undo_key, "PasterUndo", paster, true ) end
-	
+
 	return true
 end
 
 --just because
 function TOOL.BuildCPanel( CPanel )
-	
+
 	CPanel:AddControl( "Header", { Text = "#Tool.adv_duplicator.name", Description	= "#Tool.adv_duplicator.desc" }  )
 
 end
@@ -285,14 +285,14 @@ end
 local NextAddGhostTime = 0
 function TOOL:Think()
 	--not much to think about.
-	
+
 	if not self:GetPasting() and self.UnfinishedGhost and CurTime() >= NextAddGhostTime then
 		self:AddToGhost()
 		NextAddGhostTime = CurTime() + AdvDupe.GhostAddDelay(self:GetOwner())
 	end
-	
+
 	self:UpdateGhostEntities()
-	
+
 end
 
 -- the EntityModifiers that will be applied to the ghost
@@ -304,20 +304,20 @@ local GhostModifiers = { "material", "colour" }
 function TOOL:MakeGhostFromTable( EntTable, pParent, HoldAngle, HoldPos )
 	if not EntTable then return end
 	if not util.IsValidModel(EntTable.Model) then return end
-	
+
 	local GhostEntity = nil
-	
+
 	if EntTable.Model:sub( 1, 1 ) == "*" then
 		GhostEntity = ents.Create( "func_physbox" )
 	else
 		GhostEntity = ents.Create( "gmod_ghost" )
 	end
-	
+
 	-- If there are too many entities we might not spawn..
 	if not IsValid(GhostEntity) then return end
-	
+
 	duplicator.DoGeneric( GhostEntity, EntTable )
-	
+
 	GhostEntity:SetPos( EntTable.LocalPos + HoldPos )
 	GhostEntity:SetAngles( EntTable.LocalAngle )
 	GhostEntity:Spawn()
@@ -340,11 +340,11 @@ function TOOL:MakeGhostFromTable( EntTable, pParent, HoldAngle, HoldPos )
 
 	GhostEntity.Pos 	= EntTable.LocalPos
 	GhostEntity.Angle 	= EntTable.LocalAngle - HoldAngle
-	
+
 	if pParent then
 		GhostEntity:SetParent( pParent )
 	end
-	
+
 	-- If we're a ragdoll send our bone positions
 	if EntTable.Class == "prop_ragdoll" then
 		for k, v in pairs( EntTable.PhysicsObjects ) do
@@ -357,11 +357,11 @@ function TOOL:MakeGhostFromTable( EntTable, pParent, HoldAngle, HoldPos )
 				lPos = lPos + HoldPos
 			end
 			GhostEntity:SetNetworkedBonePosition( k, lPos, v.LocalAngle )
-		end	
+		end
 	end
-	
+
 	return GhostEntity
-	
+
 end
 
 
@@ -370,72 +370,72 @@ end
 --
 function TOOL:StartGhostEntities( EntityTable, Head, HoldPos, HoldAngle )
 	if not EntityTable or not EntityTable[ Head ] then return end
-	
+
 	self:ReleaseGhostEntity()
 	self.GhostEntities = {}
 	self.GhostEntitiesCount = 0
 	if self.Legacy then return end --no ghosting support for lagcey loads, table are too fucking different
-	
+
 	-- Make the head entity first
 	self.GhostEntities[ Head ] = self:MakeGhostFromTable( EntityTable[ Head ], self.GhostEntities[ Head ], HoldAngle, HoldPos )
-	
+
 	if not IsValid(self.GhostEntities[ Head ]) then return self:SetPercent(-1) end
-	
+
 	-- Set NW vars for clientside
 	self.Weapon:SetNetworkedEntity( "GhostEntity", self.GhostEntities[ Head ] )
 	self.Weapon:SetNetworkedVector( "HeadPos", self.GhostEntities[ Head ].Pos )
-	self.Weapon:SetNetworkedAngle( 	"HeadAngle", self.GhostEntities[ Head ].Angle )	
+	self.Weapon:SetNetworkedAngle( 	"HeadAngle", self.GhostEntities[ Head ].Angle )
 	self.Weapon:SetNetworkedVector( "HoldPos", HoldPos )
 	self.Weapon:SetNetworkedAngle( "HoldAngle", EntityTable[ Head ].LocalAngle )
-	
+
 	if not IsValid(self.GhostEntities[ Head ]) then
 		self:ReleaseGhostEntity()
 		self.GhostEntities = nil
 		self.UnfinishedGhost = false
 		return
 	end
-	
+
 	self:SetPercentText("Ghosting")
-	
+
 	self.GhostEntitiesCount = 1
 	NextAddGhostTime = CurTime() + .2
 	self.UnfinishedGhost = true
-	
+
 end
 
 --
 --	Update the ghost entity positions
 --
 function TOOL:UpdateGhostEntities()
-	
+
 	if SERVER and not self.GhostEntities then return end
-	
+
 	local tr = util.GetPlayerTrace( self:GetOwner(), self:GetOwner():GetAimVector() )
 	local trace = util.TraceLine( tr )
 	if not trace.Hit then return end
-	
+
 	local Snapping = self:GetOwner():KeyDown(IN_SPEED)
-	
+
 	local angle  = self:GetOwner():GetAngles()
 	angle.pitch = 0
 	angle.roll = 0
-	
+
 	if Snapping then
 		angle.yaw = math.Round( angle.yaw / 45 ) * 45
 	end
 	angle.yaw = angle.yaw + self:GetClientNumber( "angle" )
-	
+
 	local GhostEnt = nil
 	local HoldPos = nil
-	
+
 	if SERVER then
 		GhostEnt = self.GhostEntities[ self.HeadEntityIdx ]
 		HoldPos = self.HoldPos
-		
+
 		local height = self:GetClientNumber( "height" )
 		if(height > 1024)then height = 1024 end
-		self.Weapon:SetNetworkedFloat( "height", height )	
-		
+		self.Weapon:SetNetworkedFloat( "height", height )
+
 		self.Weapon:SetNetworkedBool( "worldOrigin", false )
 		self.Weapon:SetNetworkedBool( "worldAngles", false )
 		if self.StartPos and self:GetClientNumber( "worldOrigin" ) ~= 0 then
@@ -456,7 +456,7 @@ function TOOL:UpdateGhostEntities()
 		GhostEnt.Pos = self.Weapon:GetNetworkedVector( "HeadPos", Vector(0,0,0) )
 		GhostEnt.Angle = self.Weapon:GetNetworkedAngle( "HeadAngle", Angle(0,0,0) )
 		HoldPos = self.Weapon:GetNetworkedVector( "HoldPos", Vector(0,0,0) )
-		
+
 		if self.Weapon:GetNetworkedBool( "worldOrigin" ) then
 			-- Paste at Original Location
 			trace.HitPos = self.Weapon:GetNetworkedVector( "StartPos" )
@@ -466,27 +466,27 @@ function TOOL:UpdateGhostEntities()
 		local height = self.Weapon:GetNetworkedFloat( "height" )
 		if(height > 1024)then height = 1024 end
 		trace.HitPos = trace.HitPos + Vector(0,0,height)
-		
+
 	end
-	
-	if not IsValid(GhostEnt) then 
+
+	if not IsValid(GhostEnt) then
 		self:ReleaseGhostEntity()
 		self.GhostEntities = nil
 		self.UnfinishedGhost = false
 		return
 	end
-	
+
 	GhostEnt:SetMoveType( MOVETYPE_VPHYSICS )
 	GhostEnt:SetNotSolid( true )
-	
+
 	local TargetPos = GhostEnt:GetPos() - GhostEnt:LocalToWorld( HoldPos )
-	
+
 	local PhysObj = GhostEnt:GetPhysicsObject()
 	if PhysObj and PhysObj:IsValid() then
-		
+
 		PhysObj:EnableMotion( false )
 		PhysObj:SetPos( TargetPos + trace.HitPos )
-		
+
 		if self.Weapon:GetNetworkedBool( "worldOrigin" ) or self.Weapon:GetNetworkedBool( "worldAngles" )then
 			-- Paste at Original Location or Paste at Original Angles
 			PhysObj:SetAngles( self.Weapon:GetNetworkedAngle( "HoldAngle" ) + Angle(0, self:GetClientNumber( "angle" ), 0) )
@@ -494,19 +494,19 @@ function TOOL:UpdateGhostEntities()
 			-- nothing checked
 			PhysObj:SetAngles( (GhostEnt.Angle or Angle(0,0,0)) + angle )
 		end
-		
+
 		PhysObj:Wake()
-		
+
 	else
-		
+
 		-- Give the head ghost entity a physics object
 		-- This way the movement will be predicted on the client
 		if CLIENT then
 			GhostEnt:PhysicsInit( SOLID_VPHYSICS )
 		end
-		
+
 	end
-	
+
 end
 
 --
@@ -515,33 +515,33 @@ end
 function TOOL:AddToGhost()
 	local LimitedGhost = ( self:GetClientNumber( "LimitedGhost" ) == 1 ) or AdvDupe.LimitedGhost(self:GetOwner())
 	limit = not LimitedGhost and AdvDupe.GhostLimitNorm(self:GetOwner()) or LimitedGhost and AdvDupe.GhostLimitLimited(self:GetOwner())
-	
+
 	if self.GhostEntitiesCount < limit then
-		
+
 		if not self.GhostEntities or not IsValid(self.GhostEntities[self.HeadEntityIdx]) then
 			self:ReleaseGhostEntity()
 			self.GhostEntities = nil
 			self.UnfinishedGhost = false
 			return
 		end
-		
+
 		if AdvDupe[self:GetOwner()].PercentText ~= "Ghosting" then
 			self:SetPercentText("Ghosting")
 		end
-		
+
 		self.GhostEntities[self.HeadEntityIdx]:SetPos(		self.Entities[self.HeadEntityIdx].LocalPos + self.HoldPos )
 		self.GhostEntities[self.HeadEntityIdx]:SetAngles(	self.Entities[self.HeadEntityIdx].LocalAngle )
 		self.GhostEntities[self.HeadEntityIdx].Pos 		=	self.Entities[self.HeadEntityIdx].LocalPos
 		self.GhostEntities[self.HeadEntityIdx].Angle 	=	self.Entities[self.HeadEntityIdx].LocalAngle - self.HoldAngle
 		self.Weapon:SetNetworkedVector( "HeadPos",			self.GhostEntities[self.HeadEntityIdx].Pos )
-		self.Weapon:SetNetworkedAngle( 	"HeadAngle",		self.GhostEntities[self.HeadEntityIdx].Angle )	
+		self.Weapon:SetNetworkedAngle( 	"HeadAngle",		self.GhostEntities[self.HeadEntityIdx].Angle )
 		self.Weapon:SetNetworkedVector( "HoldPos",			self.HoldPos )
-		
+
 		local ghostcount = 0
 		for k, entTable in pairs( self.Entities ) do
 			if not self.GhostEntities[ k ] then
 				self.GhostEntities[ k ] = self:MakeGhostFromTable( entTable, self.GhostEntities[self.HeadEntityIdx], self.HoldAngle, self.HoldPos )
-				
+
 				ghostcount = ghostcount + 1
 				self.GhostEntitiesCount = self.GhostEntitiesCount + 1
 			end
@@ -551,9 +551,9 @@ function TOOL:AddToGhost()
 				return
 			end
 		end
-		
+
 	end
-	
+
 	self.UnfinishedGhost = false
 	self:SetPercent(100)
 	timer.Simple(.1, function() AdvDupe.SetPercent( self:GetOwner(), -1) end) --hide progress bar
@@ -617,21 +617,21 @@ end
 
 function TOOL:Deploy()
 	if CLIENT then return end
-	
+
 	if not self:GetPasting() and self.Entities then self:HideGhost(false) end
-	
+
 	if !AdvDupe[self:GetOwner()] then AdvDupe[self:GetOwner()] = {} end
 	AdvDupe[self:GetOwner()].cdir = AdvDupe.GetPlayersFolder(self:GetOwner())
 	AdvDupe[self:GetOwner()].cdir2 = ""
-	
+
 	net.Start("AdvDupe.ResetDirectories")
 		net.WriteString(dupeshare.BaseDir)
 		net.WriteString(dupeshare.BaseDir)
 		net.WriteString(AdvDupe[self:GetOwner()].cdir)
 	net.Send(self:GetOwner())
-	
+
 	self:UpdateLoadedFileInfo()
-	
+
 	self:UpdateList()
 end
 
@@ -655,7 +655,7 @@ else
 		AdvDupeClient.LoadedFileDate = net.ReadString()
 		AdvDupeClient.LoadedFileTime = net.ReadString()
 		AdvDupeClient.HasStartPos = net.ReadBit() ~= 0
-		
+
 		if net.ReadBit() ~= 0 then AdvDuplicator_UpdateControlPanel() end
 	end)
 end
@@ -689,7 +689,7 @@ end
 function TOOL:ClearClipBoard()
 
 	if not self.Entities then return end -- Already cleared
-	
+
 	self:ReleaseGhostEntity()
 	self.GhostEntities = {}
 	self.GhostEntitiesCount = 0
@@ -702,13 +702,13 @@ function TOOL:ClearClipBoard()
 	self.Constraints	= nil
 	self.FileLoaded		= false
 	self.Copied			= false
-	
+
 	self:GetOwner():ConCommand( "adv_duplicator_height 0")
 	self:GetOwner():ConCommand( "adv_duplicator_angle 0")
 	self:GetOwner():ConCommand( "adv_duplicator_worldOrigin 0")
 	self:GetOwner():ConCommand( "adv_duplicator_pastefrozen 0")
 	self:GetOwner():ConCommand( "adv_duplicator_pastewoconst 0")
-	
+
 	if SERVER then
 		self:SetPercent(-1)
 		net.Start("AdvDupe.ClearClipBoard") net.Send(self:GetOwner())
@@ -721,19 +721,19 @@ function TOOL:SaveFile( filename, desc )
 	if ( CLIENT ) then return end
 	if (!filename) or (!self.Entities) then return end
 	if (self.Legacy) or (!self.Copied) then return end
-	
-	local Filename, Creator, Desc, NumOfEnts, NumOfConst, FileVersion = AdvDupe.SaveDupeTablesToFile( 
+
+	local Filename, Creator, Desc, NumOfEnts, NumOfConst, FileVersion = AdvDupe.SaveDupeTablesToFile(
 		self:GetOwner(), self.Entities, self.Constraints,
 		self.HeadEntityIdx, self.HoldAngle, self.HoldPos,
 		filename, desc, self.StartPos, (self:GetClientNumber( "debugsave" ) == 1)
 	)
-	
+
 	self.NumOfEnts		= NumOfEnts
 	self.NumOfConst		= NumOfConst
-	
+
 	self.FileLoaded			= true
 	self.Copied				= false
-	
+
 	self.Info				= {}
 	self.Info.Creator		= Creator
 	self.Info.FilePath		= Filename
@@ -741,50 +741,50 @@ function TOOL:SaveFile( filename, desc )
 	self.Info.FileVersion	= FileVersion
 	self.Info.FileDate		= FileDate
 	self.Info.FileTime		= FileTime
-	
+
 	self:UpdateLoadedFileInfo()
-	
+
 	self:UpdateList()
-	
+
 	self:HideGhost(false)
 	self:SetPercentText("Saving")
-	
+
 end
 
 function TOOL:LoadFile( filepath )
 	if ( CLIENT ) then return end
-	
+
 	self:ClearClipBoard()
-	
+
 	self:SetPercentText("Loading")
-	
+
 	AdvDupe.LoadDupeTableFromFile( self:GetOwner(), filepath )
-	
+
 end
 
 function TOOL:LoadFileCallBack( filepath, Entities, Constraints, DupeInfo, DORInfo, HeadEntityIdx, HoldAngle, HoldPos, Legacy, Creator, Desc, NumOfEnts, NumOfConst, FileVersion, FileDate, FileTime, StartPos )
 	if ( CLIENT ) then return end
-	
+
 	if Entities then
-		
+
 		self.HeadEntityIdx	= HeadEntityIdx
 		self.HoldAngle 		= HoldAngle or Angle(0,0,0)
 		self.HoldPos 		= HoldPos or Vector(0,0,0)
 		self.StartPos 		= StartPos
-		
+
 		self.Entities		= Entities
 		self.Constraints	= Constraints or {}
 		self.DupeInfo		= DupeInfo
 		self.DORInfo		= DORInfo
-		
+
 		self.NumOfEnts		= NumOfEnts
 		self.NumOfConst		= NumOfConst
-		
+
 		self.Legacy			= Legacy
-		
+
 		self.FileLoaded		= true
 		self.Copied			= false
-		
+
 		self.Info				= {}
 		self.Info.Creator		= Creator
 		self.Info.FilePath		= filepath
@@ -792,16 +792,16 @@ function TOOL:LoadFileCallBack( filepath, Entities, Constraints, DupeInfo, DORIn
 		self.Info.FileVersion	= FileVersion
 		self.Info.FileDate		= FileDate
 		self.Info.FileTime		= FileTime
-		
+
 		--self:GetOwner():ConCommand( "adv_duplicator_angle "..self.HoldAngle.yaw)
-		
+
 		self:UpdateLoadedFileInfo(true)
-		
+
 		self:SetPercent(100)
-		
+
 		self:StartGhostEntities( self.Entities, self.HeadEntityIdx, self.HoldPos, self.HoldAngle )
 	end
-	
+
 end
 
 if SERVER then
@@ -813,7 +813,7 @@ else
 		AdvDupeClient.LoadListFiles = {}
 		AdvDupeClient.SScdir = net.ReadString()
 		local updir = net.ReadString()
-		if updir ~= "" then 
+		if updir ~= "" then
 			AdvDupeClient.LoadListDirs["/.."] = updir
 		else
 			-- They're in their root folder, show them public folders
@@ -821,27 +821,27 @@ else
 				AdvDupeClient.LoadListDirs["/"..dir] = dupeshare.BaseDir.."/"..dir
 			end
 		end
-		
+
 		-- The list of files
 		for k=1,net.ReadUInt(16) do
 			local name = net.ReadString()
 			AdvDupeClient.LoadListFiles[name] = name
 		end
-		
+
 		-- The list of folders
 		for k=1,net.ReadUInt(16) do
 			local name = net.ReadString()
 			AdvDupeClient.LoadListDirs["/"..name] = AdvDupeClient.SScdir.."/"..name
 		end
-		
+
 		if net.ReadBit() ~= 0 then
 			-- cdir2 stuff (basically just cdir1 again)
 			AdvDupeClient.LoadListDirs2  = {}
 			AdvDupeClient.LoadListFiles2 = {}
 			AdvDupeClient.SScdir2 = net.ReadString()
-			
+
 			local updir = net.ReadString()
-			if updir ~= "" then 
+			if updir ~= "" then
 				AdvDupeClient.LoadListDirs2["/.."] = updir
 			else
 				-- They're in their root folder, show them public folders
@@ -849,13 +849,13 @@ else
 					AdvDupeClient.LoadListDirs2["/"..dir] = dupeshare.BaseDir.."/"..dir
 				end
 			end
-			
+
 			-- The list of files
 			for k=1,net.ReadUInt(16) do
 				local name = net.ReadString()
 				AdvDupeClient.LoadListFiles2[name] = AdvDupeClient.SScdir2.."/"..name
 			end
-			
+
 			-- The list of folders
 			for k=1,net.ReadUInt(16) do
 				local name = net.ReadString()
@@ -869,16 +869,16 @@ end
 function TOOL:UpdateList()
 	local ply = self:GetOwner()
 	if not ply:IsValid() or not ply:IsPlayer() then return false end
-	
+
 	if not AdvDupe[ply] then AdvDupe[ply] = {} end
 	if not AdvDupe[ply].cdir then AdvDupe[ply].cdir = AdvDupe.GetPlayersFolder(ply) end
-	
+
 	local cdir = AdvDupe[ply].cdir
 	local cdir2 = AdvDupe[ply].cdir2
-	
+
 	net.Start("AdvDupe.UpdateList")
 		net.WriteString(cdir)
-		
+
 		if dupeshare.NamedLikeAPublicDir(dupeshare.GetFileFromFilename(cdir)) then
 			net.WriteString(AdvDupe.GetPlayersFolder(ply)) -- "/.." will go to the player's directory
 		elseif cdir ~= AdvDupe.GetPlayersFolder(ply) then
@@ -886,18 +886,18 @@ function TOOL:UpdateList()
 		else
 			net.WriteString("") -- Its at root, no /.. will be present
 		end
-		
+
 		local files, dirs = file.Find(dupeshare.ParsePath( cdir.."/*" ), "DATA")
 		net.WriteUInt(#files, 16)
 		for _, val in pairs(files) do net.WriteString(val) end
 		net.WriteUInt(#dirs, 16)
 		for _, val in pairs(dirs) do net.WriteString(val) end
-	
+
 		net.WriteBit(cdir2 ~= "")
 		if cdir2 ~= "" then
 			-- cdir2 stuff, basically a copypaste of the above
 			net.WriteString(cdir2)
-			
+
 			if dupeshare.NamedLikeAPublicDir(dupeshare.GetFileFromFilename(cdir2)) then
 				net.WriteString(AdvDupe.GetPlayersFolder(ply)) -- "/.." will go to the player's directory
 			elseif cdir2 ~= AdvDupe.GetPlayersFolder(ply) then
@@ -905,7 +905,7 @@ function TOOL:UpdateList()
 			else
 				net.WriteString("") -- Its at root, no /.. will be present
 			end
-			
+
 			local files, dirs = file.Find(dupeshare.ParsePath( cdir2.."/*" ), "DATA")
 			net.WriteUInt(#files, 16)
 			for _, val in pairs(files) do net.WriteString(val) end
@@ -924,83 +924,83 @@ end
 
 
 if SERVER then
-	
+
 	--Serverside save of duplicated ents
 	local function AdvDupeSS_Save( pl, _, args )
 		if !pl:IsValid() or !pl:IsPlayer() then return end
-		
+
 		local tool = pl:GetActiveWeapon()
 		if !dupeshare.CurrentToolIsDuplicator(tool) then return end
 		if (!tool:GetTable():GetToolObject().Entities) then return end
 		if (tool:GetTable():GetToolObject().Legacy) then
 			AdvDupe.SendClientError(pl, "Cannot Save Loaded Legacy Data!")
 		end
-		
+
 		local filename = ""
 		if !args[1] --if a filename wasn't passed with a arg, then get the selection in the panel
 		then filename = pl:GetInfo( "adv_duplicator_save_filename" )
 		else filename = tostring(args[1]) end
-		
+
 		local desc = ""
 		if !args[2] --if a filename wasn't passed with a arg, then get the selection in the panel
 		then desc = pl:GetInfo( "adv_duplicator_file_desc" )
 		else desc = tostring(args[2]) end
-		
+
 		--save to file
 		tool:GetTable():GetToolObject():SaveFile( tostring(filename), tostring(desc) )
-		
+
 	end
 	concommand.Add( "adv_duplicator_save", AdvDupeSS_Save )
-	
-	
+
+
 	--Load duplicated file or open folder
 	local function AdvDupeSS_Open( pl, command, args )
-		
-		if !pl:IsValid() 
-		or !pl:IsPlayer() 
+
+		if !pl:IsValid()
+		or !pl:IsPlayer()
 		then return end
-		
+
 		local tool = pl:GetActiveWeapon()
 		if (!dupeshare.CurrentToolIsDuplicator(tool)) then return end
-		
+
 		local filepath = ""
 		if !args[1] --if a filename wasn't passed with a arg, then get the selection in the panel
 		--then filepath = tool:GetTable():GetToolObject().load_filename2
 		then filepath = pl:GetInfo( "adv_duplicator_load_filename" )
 		else filepath = tostring(args[1]) end
-		
+
 		filepath = (AdvDupe[pl].cdir.."/"..filepath):lower()
-		
+
 		if ( file.Exists(filepath, "DATA") && file.IsDir(filepath, "DATA") ) then
 			--dupeshare.UsePWSys
 			tool:GetTable():GetToolObject().cdir = filepath
 			tool:GetTable():GetToolObject():UpdateList()
-			
+
 		elseif ( file.Exists(filepath, "DATA") && !file.IsDir(filepath, "DATA") ) then
-			
+
 			tool:GetTable():GetToolObject():LoadFile( filepath )
-			
+
 		else --list must be outdated, refresh it
 			tool:GetTable():GetToolObject():UpdateList()
 			return
 		end
-		
+
 	end
 	concommand.Add( "adv_duplicator_open", AdvDupeSS_Open )
-	
+
 	local function AdvDupeSS_OpenDir(pl, command, args)
 		if not pl:IsValid() or not pl:IsPlayer() or not args[1] then return end
-		
+
 		local tool = pl:GetActiveWeapon()
 		if not dupeshare.CurrentToolIsDuplicator(tool) then return end
-		
+
 		local dir = string.Implode(" ", args):lower()
-		
+
 		if dir == "" then
 			dir = AdvDupe.GetPlayersFolder(pl)
 		elseif not game.SinglePlayer() then
 			local plydir = AdvDupe.GetPlayersFolder(pl)
-			
+
 			local baddir = (dir.."/"):sub(1, plydir:len()+1) ~= plydir.."/"
 			if baddir then
 				-- The directory isn't the player's, might it be a public folder?
@@ -1018,22 +1018,22 @@ if SERVER then
 				return
 			end
 		end
-		
+
 		if file.Exists(dir, "DATA") and file.IsDir(dir, "DATA") then
 			AdvDupe[pl].cdir = dir
 			tool:GetTable():GetToolObject():UpdateList()
 		end
-		
+
 	end
 	concommand.Add( "adv_duplicator_open_dir", AdvDupeSS_OpenDir )
-	
-	
+
+
 	local function AdvDupeSS_OpenDir2(pl, command, args)
 		if !pl:IsValid() or !pl:IsPlayer() then return end
-		
+
 		local tool = pl:GetActiveWeapon()
 		if (!dupeshare.CurrentToolIsDuplicator(tool)) then return end
-		
+
 		if (!args[1]) then
 			AdvDupe[pl].cdir2 = AdvDupe[pl].cdir
 		else
@@ -1043,64 +1043,64 @@ if SERVER then
 				AdvDupe[pl].cdir2 = dir
 			end
 		end
-		
+
 		tool:GetTable():GetToolObject():UpdateList()
-		
+
 	end
 	concommand.Add( "adv_duplicator_open_dir2", AdvDupeSS_OpenDir2 )
-	
+
 	-- Clientside save of duplicated ents
 	--[[local function AdvDupeCL_Save( pl, command, args )
-		
-		if !pl:IsValid() 
-		or !pl:IsPlayer() 
-		--or !pl:GetTable().Duplicator 
-		or !AdvDupe[pl] 
+
+		if !pl:IsValid()
+		or !pl:IsPlayer()
+		--or !pl:GetTable().Duplicator
+		or !AdvDupe[pl]
 		then return end
 
 		--save to file
 		AdvDupe.SaveAndSendSaveToClient( pl, tostring(pl:GetInfo( "adv_duplicator_save_filename" )), tostring(pl:GetInfo( "adv_duplicator_file_desc" )) )
-		
+
 		AdvDupe.UpdateList(pl)
 	end
 	concommand.Add( "adv_duplicator_save_cl", AdvDupeCL_Save )]]
-	
+
 	--sends the selected file to the client
 	local function AdvDupeSS_ClSend( pl, command, args )
 		if not pl:IsValid() or not pl:IsPlayer() then return end
-		
+
 		--if a filename wasn't passed with a arg, then get the selection in the panel
 		local filename = AdvDupe[pl].cdir.."/"..tostring(args[1] or pl:GetInfo( "adv_duplicator_load_filename" ))
-		
+
 		AdvDupe.SendSaveToClient( pl, filename )
 	end
 	concommand.Add( "adv_duplicator_send_cl", AdvDupeSS_ClSend )
-	
-	
+
+
 	--allow the client to refresh the list
 	local function AdvDupeSS_UpdateLoadList( pl, command, args )
 		if args[1] then AdvDupe[pl].cdir2 = "" end
-		
+
 		AdvDupe.UpdateList(pl)
 	end
 	concommand.Add( "adv_duplicator_updatelist", AdvDupeSS_UpdateLoadList )
-	
-	
+
+
 	function TOOL:SetPercentText( Txt )
 		AdvDupe.SetPercentText( self:GetOwner(), Txt )
 	end
-	
+
 	function TOOL:SetPercent( Percent )
 		--[[umsg.Start("AdvDupe_Update_Percent", self:GetOwner())
 			umsg.Short(Percent)
 		umsg.End()]]
 		AdvDupe.SetPercent(self:GetOwner(), Percent)
 	end
-	
-end	
-	
+
+end
+
 if CLIENT then
-	
+
 	local function build_serverdir_list(dirs, files, concommand_file, concommand_dir)
 		local list = vgui.Create("DListView")
 		list:SetMultiSelect(false)
@@ -1127,7 +1127,7 @@ if CLIENT then
 		list:SortByColumn(1)
 		return list
 	end
-	
+
 	local function build_clientdir_list(dir, concommand_file, concommand_dir)
 		dir = dir:lower()
 		local list = vgui.Create("DListView")
@@ -1162,22 +1162,22 @@ if CLIENT then
 			end
 		return list
 	end
-	
+
 	function AdvDuplicator_UpdateControlPanel()
 		local CPanel = controlpanel.Get( "adv_duplicator" )
 		if not CPanel then return end
-		
+
 		--clear the panel so we can make it again!
 		for i,v in pairs(CPanel.Items) do
 			if v.Left then v.Left:GetParent():Remove() end-- v.Left:Remove() end
 			CPanel.Items[i]:Remove()
 			CPanel.Items[i] = nil
 		end
-		
+
 		CPanel:InvalidateLayout()
-		
+
 		local menu = AdvDupeClient.CurMenu
-		
+
 		--build the folder lists, if we'll need them
 		local ServerDir
 		local ClientDir
@@ -1198,7 +1198,7 @@ if CLIENT then
 					ServerDir:AddColumn("Local: "..string.gsub(AdvDupeClient.SScdir, dupeshare.BaseDir, ""))
 				end
 			end
-			
+
 		end
 		if menu == "clientupload" or menu == "clientdir" then
 			ClientDir = build_clientdir_list(AdvDupeClient.CLcdir, "adv_duplicator_load_filename_cl", "adv_duplicator_open_cl")
@@ -1219,17 +1219,17 @@ if CLIENT then
 			ClientDir2 = build_clientdir_list(AdvDupeClient.CLcdir2, "adv_duplicator_load_filename_cl2", "adv_duplicator_open_cl2")
 			ClientDir2:AddColumn("Local Destination: "..string.gsub(AdvDupeClient.CLcdir2, dupeshare.BaseDir, ""))
 		end
-		
-		
+
+
 		--show the current menu
 		if menu == "main" or not menu or menu == "" then
 			CPanel:Help((game.SinglePlayer() and "Main" or "Server").." Menu (save and load)")
 			local bottom = vgui.Create( "DForm")
-			
+
 			-- Hide the blue header
 			bottom.Header:SetVisible(false)
 			bottom.Paint = function(self,w,h) return false end
-			
+
 			bottom:Button("Open", "adv_duplicator_open")
 			if game.SinglePlayer() then
 				bottom:Button("Save", "adv_duplicator_save_gui")
@@ -1271,25 +1271,25 @@ if CLIENT then
 				bottom:CheckBox("Paste at Original Location:", "adv_duplicator_worldOrigin")
 			end
 			bottom:CheckBox("Paste at Original Angles:", "adv_duplicator_worldAngles")
-			
+
 			CPanel:AddItem(ServerDir)
-			
+
 			-- Calculate height of the list of dupes
 			local bottomtall = 32
 			for k,v in pairs(bottom.Items) do bottomtall = bottomtall + v:GetTall() + 18 end
 			local parent = CPanel:GetParent()
 			if parent:GetParent() then parent = parent:GetParent() end
-			
+
 			-- Clamp *ScrH() - how much space the bottom section needs* between *5 lines* and *20 lines*
 			ServerDir:SetTall(math.Clamp(parent:GetTall()-bottomtall,ServerDir:GetHeaderHeight() + 20 + ServerDir:GetDataHeight()*5, ServerDir:GetHeaderHeight() + 20 + ServerDir:GetDataHeight()*#ServerDir:GetLines()))
-			
+
 			CPanel:AddItem(bottom)
 		elseif menu == "serverdir" then
-			
+
 			CPanel:Button( "--Back--", "adv_duplicator_cl_menu", "main")
-			
+
 			CPanel:Help((game.SinglePlayer() and "Local" or "Server").." Folder Management")
-			
+
 			local middle = vgui.Create( "ControlPanel")
 			middle:Button("Make New Folder", "adv_duplicator_makedir_gui", "server")
 			if not game.SinglePlayer() and dupeshare.UsePWSys then
@@ -1300,19 +1300,19 @@ if CLIENT then
 			middle:Button("Move", "adv_duplicator_fileopts", "move")
 			middle:Button("Delete", "adv_duplicator_confirmdelete_gui", "server") --"adv_duplicator_fileopts delete"
 			middle:PerformLayout() --do this so bottom:GetTall() will return the correct value
-			
+
 			local listtall = (CPanel:GetParent():GetParent():GetTall()-120-middle:GetTall())/2
-			
+
 			--1st folder list
 			CPanel:AddItem(ServerDir)
 			ServerDir:SetTall(listtall)
-			
+
 			CPanel:AddItem(middle)
-			
+
 			--2nd folder list
 			CPanel:AddItem(ServerDir2)
 			ServerDir2:SetTall(listtall)
-			
+
 		elseif menu == "paster" then
 			CPanel:Button("--Back--", "adv_duplicator_cl_menu", "main")
 			CPanel:Help("Paster Settings (make with reload)")
@@ -1320,8 +1320,8 @@ if CLIENT then
 			CPanel:NumSlider("Automatic Undo Delay", "adv_duplicator_undo_delay", 0, 100, 1)
 			CPanel:NumSlider("Range", "adv_duplicator_range", 0, 1000, 0)
 			CPanel:CheckBox("Show Beam", "adv_duplicator_show_beam")
-			
-			local params = { 
+
+			local params = {
 				Label		= "#Spawn Key",
 				Label2		= "#Undo Key",
 				Command		= "adv_duplicator_pasterkey",
@@ -1329,17 +1329,17 @@ if CLIENT then
 				ButtonSize	= "22",
 			}
 			CPanel:AddControl( "Numpad",  params )
-			
-			
+
+
 		elseif (menu == "clientupload") then
 			CPanel:Button("--Back--", "adv_duplicator_cl_menu", "main")
-			
+
 			if not game.SinglePlayer() then
-			
+
 				CPanel:Help("Upload/Download Menu")
-				
+
 				CPanel:Help("Files on Server")
-				
+
 				local middle = vgui.Create( "ControlPanel")
 				if AdvDupeClient.downloading then
 					middle:Help("==Download in Progress==")
@@ -1348,7 +1348,7 @@ if CLIENT then
 				else
 					middle:Help("Server Disabled Downloads")
 				end
-				
+
 				if AdvDupeClient.sending then
 					middle:Help("==Upload in Progress==")
 				elseif AdvDupeClient.CanUpload() then
@@ -1358,31 +1358,31 @@ if CLIENT then
 				end
 				middle:Help("Local Files")
 				middle:PerformLayout() --do this so bottom:GetTall() will return the correct value
-				
+
 				local listtall = (CPanel:GetParent():GetParent():GetTall()-170-middle:GetTall())/2
-			
+
 				--1st folder list
 				CPanel:AddItem(ServerDir)
 				ServerDir:SetTall(listtall)
-				
+
 				CPanel:AddItem(middle)
-				
+
 				--2nd folder list
 				CPanel:AddItem(ClientDir)
 				ClientDir:SetTall(listtall)
-				
+
 				--I don't think this ever worked
 				--CPanel:Button("Open Local Folder Manager Menu", "adv_duplicator_cl_menu", "clientdir")
 			end
-			
-			
+
+
 		elseif menu == "clientdir" then
 			CPanel:Button("--Back--", "adv_duplicator_cl_menu", "clientupload")
-			
-			
+
+
 			if not game.SinglePlayer() then
 				CPanel:Help("Local Folder Management")
-				
+
 				local middle = vgui.Create( "ControlPanel")
 				middle:Button("Make New Folder", "adv_duplicator_makedir_gui", "client")
 				middle:Button("Rename", "adv_duplicator_renamefile_gui", "client")
@@ -1391,80 +1391,80 @@ if CLIENT then
 				middle:Button("Delete", "adv_duplicator_confirmdelete_gui", "client") --"adv_duplicator_cl_fileopts delete"
 				middle:Help("Local Files")
 				middle:PerformLayout() --do this so bottom:GetTall() will return the correct value
-				
+
 				local listtall = (CPanel:GetParent():GetParent():GetTall()-120-middle:GetTall())/2
-			
+
 				--1st folder list
 				CPanel:AddItem(ClientDir)
 				ClientDir:SetTall(listtall)
-				
+
 				CPanel:AddItem(middle)
-				
+
 				--2nd folder list
 				CPanel:AddItem(ClientDir2)
 				ClientDir2:SetTall(listtall)
 			end
 		end
 	end
-	
-	
-	
+
+
+
 	function AdvDupeCL_Menu(pl, command, args)
 		if !pl:IsValid() or !pl:IsPlayer() or !args[1] then return end
-		
+
 		AdvDupeClient.CurMenu = args[1]
-		
+
 		if args[1] == "serverdir" then
 			LocalPlayer():ConCommand("adv_duplicator_open_dir2")
 		else
 			LocalPlayer():ConCommand("adv_duplicator_updatelist 1")
 		end
-		
+
 	end
 	concommand.Add( "adv_duplicator_cl_menu", AdvDupeCL_Menu )
-	
-	
+
+
 	local function AdvDupeCl_OpenDir(pl, command, args)
 		if !pl:IsValid() or !pl:IsPlayer() then return end
-		
+
 		local dir = string.Implode(" ", args):lower()
-		
+
 		if ( file.Exists(dir, "DATA") && file.IsDir(dir, "DATA") ) then
 			AdvDupeClient.CLcdir = dir
 		end
-		
+
 		LocalPlayer():ConCommand("adv_duplicator_updatelist")
-		
+
 	end
 	concommand.Add( "adv_duplicator_open_cl", AdvDupeCl_OpenDir )
-	
+
 	local function AdvDupeCl_OpenDir2(pl, command, args)
 		if !pl:IsValid() or !pl:IsPlayer() then return end
-		
+
 		local dir = string.Implode(" ", args):lower()
-		
+
 		if ( file.Exists(dir, "DATA") && file.IsDir(dir, "DATA") ) then
 			AdvDupeClient.CLcdir2 = dir
 		end
-		
+
 		LocalPlayer():ConCommand("adv_duplicator_updatelist")
-		
+
 	end
 	concommand.Add( "adv_duplicator_open_cl2", AdvDupeCl_OpenDir2 )
-	
-	
+
+
 	local function AdvDupeCL_UpLoad( pl, command, args )
 		if !pl:IsValid() or !pl:IsPlayer() then return end
-		
+
 		local filename = ""
 		if !args[1] --if a filename wasn't passed with an arg, then get the selection in the panel
 		then filename = pl:GetInfo( "adv_duplicator_load_filename_cl" )
 		else filename = tostring(args[1]) end
-		
+
 		AdvDupeClient.UpLoadFile( pl, filename:lower() )
-		
+
 		AdvDuplicator_UpdateControlPanel()
 	end
 	concommand.Add( "adv_duplicator_upload_cl", AdvDupeCL_UpLoad )
-	
+
 end
